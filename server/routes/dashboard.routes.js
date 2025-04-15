@@ -1,5 +1,8 @@
 import express from 'express';
 import { auth } from '../middleware/auth.middleware.js';
+import Visit from '../models/visit.model.js';
+import Elder from '../models/elder.model.js';
+import Volunteer from '../models/volunteer.model.js';
 
 const router = express.Router();
 
@@ -20,118 +23,94 @@ router.get('/', auth, async (req, res) => {
 });
 
 // נתיב לקבלת נתוני המפה
-router.get('/map', auth, async (req, res) => {
+router.get('/map', async (req, res) => {
   try {
-    const {
-      radius = 10, // רדיוס בק"מ
-      elderlyStatus, // סטטוס הזקנים (needs_visit, visited)
-      volunteerStatus, // סטטוס המתנדבים (available, busy)
-      lastVisitDays, // מספר ימים מביקור אחרון
-      lat, // קו רוחב של המיקום הנוכחי
-      lng // קו אורך של המיקום הנוכחי
-    } = req.query;
-
-    // כרגע מחזיר נתוני דמה מסוננים
-    const mockData = {
-      elderly: [
-        {
-          _id: '1',
-          firstName: 'ישראל',
-          lastName: 'ישראלי',
-          address: 'רחוב הרצל 1, תל אביב',
-          location: {
-            type: 'Point',
-            coordinates: [34.7818, 32.0853]
-          },
-          lastVisit: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          status: 'needs_visit',
-          distanceFromCurrentLocation: 2.5 // במידה ונשלחו קואורדינטות
-        },
-        {
-          _id: '2',
-          firstName: 'שרה',
-          lastName: 'לוי',
-          address: 'רחוב ביאליק 15, רמת גן',
-          location: {
-            type: 'Point',
-            coordinates: [34.8246, 32.0837]
-          },
-          lastVisit: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          status: 'visited',
-          distanceFromCurrentLocation: 3.8
+    const { lat, lng, radius = 10 } = req.query;
+    
+    // המרת הרדיוס לרדיאנים (1 ק"מ = ~0.0089 מעלות)
+    const radiusInDegrees = radius * 0.0089;
+    
+    // מציאת זקנים באזור
+    const elderly = await Elder.find({
+      'location.coordinates': {
+        $geoWithin: {
+          $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInDegrees]
         }
-      ],
-      volunteers: [
-        {
-          _id: '1',
-          firstName: 'משה',
-          lastName: 'כהן',
-          location: {
-            type: 'Point',
-            coordinates: [34.7728, 32.0673]
-          },
-          status: 'available',
-          lastActive: new Date(),
-          distanceFromCurrentLocation: 1.2
-        },
-        {
-          _id: '2',
-          firstName: 'רחל',
-          lastName: 'גולדברג',
-          location: {
-            type: 'Point',
-            coordinates: [34.7977, 32.0853]
-          },
-          status: 'busy',
-          lastActive: new Date(Date.now() - 30 * 60 * 1000),
-          distanceFromCurrentLocation: 4.1
+      }
+    }).populate('lastVisit');
+
+    // מציאת מתנדבים באזור
+    const volunteers = await Volunteer.find({
+      'location.coordinates': {
+        $geoWithin: {
+          $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInDegrees]
         }
-      ]
-    };
+      }
+    });
 
-    // הפעלת פילטרים על נתוני הדמה
-    let filteredData = {
-      elderly: [...mockData.elderly],
-      volunteers: [...mockData.volunteers]
-    };
+    // חישוב מרחקים ועיבוד נתונים
+    const processedElderly = elderly.map(elder => {
+      const daysSinceLastVisit = elder.lastVisit 
+        ? Math.floor((Date.now() - new Date(elder.lastVisit.date)) / (1000 * 60 * 60 * 24))
+        : Infinity;
+        
+      return {
+        _id: elder._id,
+        firstName: elder.firstName,
+        lastName: elder.lastName,
+        address: elder.address,
+        location: elder.location,
+        status: daysSinceLastVisit > 14 ? 'needs_visit' : 'visited',
+        lastVisit: elder.lastVisit ? elder.lastVisit.date : null,
+        distanceFromCurrentLocation: calculateDistance(
+          lat, 
+          lng, 
+          elder.location.coordinates[1], 
+          elder.location.coordinates[0]
+        )
+      };
+    });
 
-    // פילטור לפי מרחק
-    if (lat && lng && radius) {
-      filteredData.elderly = filteredData.elderly.filter(
-        elder => elder.distanceFromCurrentLocation <= radius
-      );
-      filteredData.volunteers = filteredData.volunteers.filter(
-        volunteer => volunteer.distanceFromCurrentLocation <= radius
-      );
-    }
+    const processedVolunteers = volunteers.map(volunteer => ({
+      _id: volunteer._id,
+      firstName: volunteer.firstName,
+      lastName: volunteer.lastName,
+      location: volunteer.location,
+      status: volunteer.status,
+      lastActive: volunteer.lastActive,
+      distanceFromCurrentLocation: calculateDistance(
+        lat,
+        lng,
+        volunteer.location.coordinates[1],
+        volunteer.location.coordinates[0]
+      )
+    }));
 
-    // פילטור לפי סטטוס זקנים
-    if (elderlyStatus) {
-      filteredData.elderly = filteredData.elderly.filter(
-        elder => elder.status === elderlyStatus
-      );
-    }
-
-    // פילטור לפי סטטוס מתנדבים
-    if (volunteerStatus) {
-      filteredData.volunteers = filteredData.volunteers.filter(
-        volunteer => volunteer.status === volunteerStatus
-      );
-    }
-
-    // פילטור לפי תאריך ביקור אחרון
-    if (lastVisitDays) {
-      const cutoffDate = new Date(Date.now() - lastVisitDays * 24 * 60 * 60 * 1000);
-      filteredData.elderly = filteredData.elderly.filter(
-        elder => new Date(elder.lastVisit) <= cutoffDate
-      );
-    }
-
-    res.json(filteredData);
+    res.json({
+      elderly: processedElderly,
+      volunteers: processedVolunteers
+    });
   } catch (error) {
-    console.error('שגיאה בקבלת נתוני המפה:', error);
-    res.status(500).json({ message: 'שגיאה בקבלת נתוני המפה' });
+    console.error('שגיאה בקבלת נתוני מפה:', error);
+    res.status(500).json({ message: 'שגיאה בקבלת נתוני מפה' });
   }
 });
+
+// פונקציית עזר לחישוב מרחק בין שתי נקודות
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // רדיוס כדור הארץ בקילומטרים
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function toRad(degrees) {
+  return degrees * Math.PI / 180;
+}
 
 export default router; 

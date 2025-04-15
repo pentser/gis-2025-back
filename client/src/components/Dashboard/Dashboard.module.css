@@ -1,5 +1,5 @@
 .dashboard {
-  padding: var(--spacing-lg);
+  padding: 20px;
 }
 
 .dashboard h2 {
@@ -8,6 +8,7 @@
 }
 
 .statsGrid {
+  height: 100%;
   margin-bottom: var(--spacing-xl) !important;
 }
 
@@ -27,7 +28,7 @@
 }
 
 .section {
-  margin-top: var(--spacing-xl);
+  margin-top: 20px;
 }
 
 .section h3 {
@@ -40,25 +41,31 @@
 }
 
 .urgentRow:hover {
-  background-color: rgba(var(--error-color), 0.05);
+  background-color: #f5f5f5;
 }
 
 .loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 400px;
-  font-size: 1.2rem;
-  color: var(--primary-color);
+  text-align: center;
+  padding: 20px;
 }
 
 .error {
-  padding: var(--spacing-md);
-  margin: var(--spacing-md) 0;
-  color: var(--error-color);
-  background-color: var(--background-color);
-  border: 1px solid var(--error-color);
-  border-radius: var(--border-radius-md);
+  color: red;
+  text-align: center;
+  padding: 20px;
+}
+
+.mapCard {
+  height: 500px;
+  width: 100%;
+}
+
+/* Map container styles */
+.mapCard :global(.leaflet-container) {
+  height: 100%;
+  width: 100%;
+  min-height: 450px;
+  border-radius: 4px;
 }
 
 @media (max-width: 600px) {
