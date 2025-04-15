@@ -3,6 +3,8 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
+import visitsRoutes from './routes/visits.routes.js';
 
 dotenv.config();
 
@@ -38,6 +40,8 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/visits', visitsRoutes);
 
 // חיבור למסד הנתונים
 mongoose.connect(process.env.MONGODB_URI)
