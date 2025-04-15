@@ -1,0 +1,47 @@
+.container {
+  padding: 24px;
+  max-width: 800px;
+}
+
+.paper {
+  padding: 32px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+  background-color: var(--primary-color);
+  font-size: 1.5rem;
+}
+
+.message {
+  margin: 16px 0;
+  text-align: center;
+}
+
+.submit {
+  margin-top: 16px;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 16px;
+  }
+  
+  .paper {
+    padding: 24px;
+  }
+  
+  .avatar {
+    width: 64px;
+    height: 64px;
+  }
+} 

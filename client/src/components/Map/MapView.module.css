@@ -1,0 +1,128 @@
+.container {
+  padding: 24px;
+}
+
+.mapContainer {
+  padding: 24px;
+  height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  margin-bottom: 24px;
+}
+
+.map {
+  flex: 1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* עיצוב Popup של Leaflet */
+:global(.leaflet-popup-content-wrapper) {
+  border-radius: 8px;
+  padding: 12px;
+}
+
+:global(.leaflet-popup-content) {
+  margin: 0;
+  font-family: 'Assistant', sans-serif;
+}
+
+:global(.leaflet-popup-content h3) {
+  margin: 0 0 8px;
+  color: var(--primary-color);
+}
+
+:global(.leaflet-popup-content p) {
+  margin: 4px 0;
+  color: var(--text-color);
+}
+
+.mapLegend {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background-color: var(--background-color);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-xs);
+}
+
+.legendItem:last-child {
+  margin-bottom: 0;
+}
+
+.legendMarker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: var(--spacing-xs);
+}
+
+.popup {
+  min-width: 200px;
+  padding: var(--spacing-xs);
+}
+
+.popup h3 {
+  margin-bottom: var(--spacing-sm);
+  color: var(--primary-color);
+}
+
+.popup p {
+  margin: var(--spacing-xs) 0;
+}
+
+.popup button {
+  margin-top: var(--spacing-sm);
+  width: 100%;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--error-color);
+  background-color: var(--background-color);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 16px;
+  }
+  
+  .mapContainer {
+    padding: 16px;
+    height: calc(100vh - 100px);
+  }
+  
+  .title {
+    margin-bottom: 16px;
+  }
+
+  .mapLegend {
+    font-size: 0.875rem;
+  }
+} 

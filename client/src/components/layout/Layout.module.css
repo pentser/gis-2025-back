@@ -1,0 +1,118 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  padding: var(--spacing-lg);
+  margin-top: 64px; /* גובה ה-Navbar */
+  background-color: var(--background-light);
+}
+
+@media (max-width: 600px) {
+  .main {
+    padding: var(--spacing-md);
+  }
+}
+
+.root {
+  display: flex;
+  min-height: 100vh;
+  direction: rtl;
+}
+
+.appBar {
+  z-index: 1201;
+  background-color: var(--primary-color);
+}
+
+.content {
+  flex-grow: 1;
+  padding: 24px;
+  background-color: #fafafa;
+}
+
+.toolbar {
+  min-height: 64px;
+}
+
+/* Drawer/Sidebar Styles */
+.drawer {
+  width: 240px;
+  flex-shrink: 0;
+}
+
+.drawerPaper {
+  width: 240px;
+  background-color: #fff;
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.drawerHeader {
+  padding: 16px;
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.drawerHeader h3 {
+  margin: 0;
+}
+
+/* Menu Items */
+.listItem {
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+}
+
+.listItem:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.listItem svg {
+  color: var(--primary-color);
+  margin-left: 12px;
+}
+
+.listItemText {
+  color: var(--text-color);
+}
+
+.listItem:hover .listItemText,
+.listItem:hover svg {
+  color: var(--primary-color);
+}
+
+/* Responsive Styles */
+@media (max-width: 600px) {
+  .desktopDrawer {
+    display: none;
+  }
+  
+  .content {
+    padding: 16px;
+  }
+  
+  .drawer {
+    width: 240px;
+  }
+}
+
+@media (min-width: 601px) {
+  .mobileDrawer {
+    display: none;
+  }
+}
+
+/* Menu Button */
+.menuButton {
+  margin-left: 16px;
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .menuButton {
+    display: block;
+  }
+} 

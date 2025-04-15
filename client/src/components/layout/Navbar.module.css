@@ -1,0 +1,42 @@
+.navbar {
+  background-color: var(--primary-color) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.menuButton {
+  margin-left: var(--spacing-md) !important;
+}
+
+.title {
+  flex-grow: 1;
+}
+
+.logoLink {
+  color: var(--background-color);
+  text-decoration: none;
+}
+
+.logoLink:hover {
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+.navLinks {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 1rem !important;
+  }
+  
+  .navLinks {
+    gap: var(--spacing-xs);
+  }
+  
+  .navLinks button {
+    padding: var(--spacing-xs) var(--spacing-sm) !important;
+    font-size: 0.875rem !important;
+  }
+} 
