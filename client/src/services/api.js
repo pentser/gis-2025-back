@@ -71,7 +71,7 @@ export const deleteElderly = (id) =>
 
 export const fetchDashboardData = () => fetchWithAuth('/api/dashboard');
 
-export const fetchMapData = () => fetchWithAuth('/api/map');
+export const fetchMapData = () => fetchWithAuth('/api/dashboard/map');
 
 export const fetchVisitStats = () => fetchWithAuth('/api/visits/stats');
 

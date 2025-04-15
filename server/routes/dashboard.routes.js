@@ -1,7 +1,7 @@
 import express from 'express';
 import { auth } from '../middleware/auth.middleware.js';
 import Visit from '../models/visit.model.js';
-import Elder from '../models/elder.model.js';
+import Elder from '../models/elderly.model.js';
 import Volunteer from '../models/volunteer.model.js';
 
 const router = express.Router();

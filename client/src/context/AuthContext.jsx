@@ -100,13 +100,22 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify(userData),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('שגיאה בהרשמה');
+        console.error('שגיאת הרשמה:', data);
+        throw new Error(data.message || 'שגיאה בהרשמה');
       }
 
-      const data = await response.json();
-      setUser(data.user);
-      return data;
+      console.log('הרשמה מוצלחת:', data);
+      
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        setUser(data.user);
+        return data;
+      } else {
+        throw new Error('לא התקבל טוקן מהשרת');
+      }
     } catch (error) {
       console.error('שגיאה בהרשמה:', error);
       throw error;
