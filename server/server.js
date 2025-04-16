@@ -29,7 +29,7 @@ app.use(express.json());
 
 // לוגים לבקשות נכנסות
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`, req.body);
+  console.log(`${req.method} ${req.path}`, req.body, req.query);
   next();
 });
 
@@ -52,4 +52,23 @@ mongoose.connect(process.env.MONGODB_URI)
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`השרת פועל בפורט ${PORT}`);
+});
+
+// טיפול בשגיאות כדי למנוע החזרת HTML
+app.use((err, req, res, next) => {
+  console.error('שגיאת שרת:', err);
+  res.status(500).json({
+    error: true,
+    message: err.message || 'שגיאת שרת פנימית',
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack
+  });
+});
+
+// טיפול ב-404 כדי להחזיר JSON במקום דף HTML
+app.use((req, res) => {
+  console.log(`דף לא נמצא: ${req.method} ${req.path}`);
+  res.status(404).json({
+    error: true,
+    message: `הנתיב ${req.path} לא נמצא`
+  });
 }); 

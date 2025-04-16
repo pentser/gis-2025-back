@@ -273,14 +273,64 @@ const MapView = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // בדיקה אם userLocation קיים ומכיל ערכים תקינים
+        if (!userLocation || userLocation.length < 2) {
+          console.log('ממתין למיקום המשתמש לפני טעינת נתונים');
+          return; // יוצאים מהפונקציה אם אין מיקום תקין
+        }
+
         const queryParams = new URLSearchParams({
           lat: userLocation[0],
           lng: userLocation[1],
           ...filters
         });
 
+        console.log('שולח בקשה ל-API:', `/api/dashboard/map?${queryParams}`);
         const response = await fetch(`/api/dashboard/map?${queryParams}`);
-        const data = await response.json();
+        
+        // בדיקה אם התגובה תקינה
+        if (!response.ok) {
+          console.error('שגיאת תגובה מהשרת:', response.status, response.statusText);
+          // נסיון לקרוא את התוכן גם אם אינו JSON תקין
+          const errorText = await response.text();
+          console.error('תוכן השגיאה:', errorText);
+          throw new Error(`שגיאת שרת: ${response.status} ${response.statusText}`);
+        }
+        
+        console.log('התקבלה תגובה תקינה מהשרת');
+        const responseText = await response.text();
+        
+        // בדיקה אם התגובה מכילה JSON תקין
+        if (!responseText || responseText.trim() === '') {
+          throw new Error('התגובה מהשרת ריקה');
+        }
+        
+        // בדיקה אם התגובה מתחילה ב-HTML במקום JSON
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          console.error('התקבל HTML במקום JSON:', responseText.substring(0, 100));
+          throw new Error('התקבל HTML במקום JSON מהשרת');
+        }
+        
+        // ניסיון לפענח את ה-JSON
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('שגיאה בפענוח JSON:', parseError);
+          console.error('התוכן שהתקבל:', responseText.substring(0, 200));
+          throw new Error(`שגיאה בפענוח JSON: ${parseError.message}`);
+        }
+        
+        // בדיקה אם הנתונים שהתקבלו תקינים
+        if (!data || !data.elderly || !data.volunteers) {
+          console.error('המידע שהתקבל מהשרת לא תקין:', data);
+          throw new Error('מבנה הנתונים שהתקבל מהשרת אינו תקין');
+        }
+        
+        console.log('מידע תקין התקבל:', {
+          elderly: data.elderly.length,
+          volunteers: data.volunteers.length
+        });
         
         // פילטור לפי חיפוש טקסטואלי
         if (filters.searchTerm) {
@@ -288,7 +338,7 @@ const MapView = () => {
           data.elderly = data.elderly.filter(elder => 
             elder.firstName.toLowerCase().includes(searchLower) ||
             elder.lastName.toLowerCase().includes(searchLower) ||
-            elder.address.toLowerCase().includes(searchLower)
+            (elder.address && typeof elder.address === 'string' && elder.address.toLowerCase().includes(searchLower))
           );
           data.volunteers = data.volunteers.filter(volunteer =>
             volunteer.firstName.toLowerCase().includes(searchLower) ||
@@ -299,18 +349,29 @@ const MapView = () => {
         setMapData(data);
       } catch (error) {
         console.error('שגיאה בטעינת נתוני המפה:', error);
+        // הגדר נתוני ברירת מחדל ריקים
+        setMapData({ elderly: [], volunteers: [] });
       }
     };
 
-    fetchData();
+    // מפעילים את הפונקציה רק אם יש מיקום תקין
+    if (userLocation && userLocation.length === 2) {
+      fetchData();
+    }
   }, [filters, userLocation]);
 
   // חישוב מסלול אופטימלי
-  const optimalRoute = filters.showRoute ? calculateOptimalRoute(mapData.elderly, userLocation) : [];
+  const optimalRoute = filters.showRoute && userLocation && mapData.elderly && mapData.elderly.length > 0
+    ? calculateOptimalRoute(mapData.elderly, userLocation)
+    : [];
+  
   const routeCoordinates = optimalRoute.map(elder => 
-    [elder.location.coordinates[1], elder.location.coordinates[0]]
-  );
-  if (routeCoordinates.length > 0) {
+    elder && elder.location && elder.location.coordinates && elder.location.coordinates.length >= 2
+      ? [elder.location.coordinates[1], elder.location.coordinates[0]]
+      : null
+  ).filter(coords => coords !== null); // מסנן קואורדינטות לא תקינות
+  
+  if (routeCoordinates.length > 0 && userLocation && userLocation.length === 2) {
     routeCoordinates.unshift(userLocation);
   }
 
@@ -362,44 +423,48 @@ const MapView = () => {
         </Marker>
 
         {/* סמנים עבור זקנים */}
-        {mapData.elderly.map((elder) => (
-          <Marker
-            key={elder._id}
-            position={[elder.location.coordinates[1], elder.location.coordinates[0]]}
-            icon={createElderlyIcon(calculateUrgency(elder))}
-          >
-            <Popup>
-              <div className="popup-content">
-                <h3>{elder.firstName} {elder.lastName}</h3>
-                <p>כתובת: {elder.address}</p>
-                <p>סטטוס: {elder.status === 'needs_visit' ? 'זקוק לביקור' : 'בוקר לאחרונה'}</p>
-                <p>ביקור אחרון: {new Date(elder.lastVisit).toLocaleDateString('he-IL')}</p>
-                <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
-                <p>דחיפות: {
-                  calculateUrgency(elder) === 'high' ? 'גבוהה' :
-                  calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
-                }</p>
-              </div>
-            </Popup>
-          </Marker>
+        {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly.map((elder) => (
+          elder && elder.location && elder.location.coordinates && elder.location.coordinates.length >= 2 ? (
+            <Marker
+              key={elder._id}
+              position={[elder.location.coordinates[1], elder.location.coordinates[0]]}
+              icon={createElderlyIcon(calculateUrgency(elder))}
+            >
+              <Popup>
+                <div className="popup-content">
+                  <h3>{elder.firstName} {elder.lastName}</h3>
+                  <p>כתובת: {elder.address}</p>
+                  <p>סטטוס: {elder.status === 'needs_visit' ? 'זקוק לביקור' : 'בוקר לאחרונה'}</p>
+                  <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
+                  <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
+                  <p>דחיפות: {
+                    calculateUrgency(elder) === 'high' ? 'גבוהה' :
+                    calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
+                  }</p>
+                </div>
+              </Popup>
+            </Marker>
+          ) : null
         ))}
 
         {/* סמנים עבור מתנדבים */}
-        {mapData.volunteers.map((volunteer) => (
-          <Marker
-            key={volunteer._id}
-            position={[volunteer.location.coordinates[1], volunteer.location.coordinates[0]]}
-            icon={volunteerIcon}
-          >
-            <Popup>
-              <div className="popup-content">
-                <h3>{volunteer.firstName} {volunteer.lastName}</h3>
-                <p>סטטוס: {volunteer.status === 'available' ? 'זמין' : 'עסוק'}</p>
-                <p>פעיל לאחרונה: {new Date(volunteer.lastActive).toLocaleString('he-IL')}</p>
-                <p>מרחק: {volunteer.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
-              </div>
-            </Popup>
-          </Marker>
+        {mapData.volunteers && mapData.volunteers.length > 0 && mapData.volunteers.map((volunteer) => (
+          volunteer && volunteer.location && volunteer.location.coordinates && volunteer.location.coordinates.length >= 2 ? (
+            <Marker
+              key={volunteer._id}
+              position={[volunteer.location.coordinates[1], volunteer.location.coordinates[0]]}
+              icon={volunteerIcon}
+            >
+              <Popup>
+                <div className="popup-content">
+                  <h3>{volunteer.firstName} {volunteer.lastName}</h3>
+                  <p>סטטוס: {volunteer.status === 'available' ? 'זמין' : 'עסוק'}</p>
+                  <p>פעיל לאחרונה: {volunteer.lastActive ? new Date(volunteer.lastActive).toLocaleString('he-IL') : 'לא ידוע'}</p>
+                  <p>מרחק: {volunteer.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
+                </div>
+              </Popup>
+            </Marker>
+          ) : null
         ))}
 
         {/* מסלול מומלץ */}

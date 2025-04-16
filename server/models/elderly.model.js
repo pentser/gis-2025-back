@@ -35,24 +35,24 @@ const elderlySchema = new mongoose.Schema({
       type: String,
       required: [true, 'עיר היא שדה חובה']
     },
-    zipCode: String,
-    location: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point'
-      },
-      coordinates: {
-        type: [Number],
-        required: true,
-        validate: {
-          validator: function(v) {
-            return v.length === 2 && 
-                   v[0] >= -180 && v[0] <= 180 && // longitude
-                   v[1] >= -90 && v[1] <= 90;     // latitude
-          },
-          message: 'נקודות ציון לא תקינות'
-        }
+    zipCode: String
+  },
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+      validate: {
+        validator: function(v) {
+          return v.length === 2 && 
+                 v[0] >= -180 && v[0] <= 180 && // longitude
+                 v[1] >= -90 && v[1] <= 90;     // latitude
+        },
+        message: 'נקודות ציון לא תקינות'
       }
     }
   },
@@ -108,7 +108,7 @@ const elderlySchema = new mongoose.Schema({
 });
 
 // אינדקס גיאוגרפי עבור חיפוש לפי מיקום
-elderlySchema.index({ 'address.location': '2dsphere' });
+elderlySchema.index({ 'location': '2dsphere' });
 
 const Elderly = mongoose.model('Elderly', elderlySchema);
 

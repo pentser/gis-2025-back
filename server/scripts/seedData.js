@@ -32,6 +32,10 @@ const seedData = async () => {
           city: 'תל אביב',
           zipCode: '6123001'
         },
+        location: {
+          type: 'Point',
+          coordinates: [34.7818, 32.0853]  // תל אביב
+        },
         role: 'מנהל',
         isActive: true
       },
@@ -46,6 +50,10 @@ const seedData = async () => {
           city: 'רחובות',
           zipCode: '7610001'
         },
+        location: {
+          type: 'Point',
+          coordinates: [34.8114, 31.8928]  // רחובות
+        },
         role: 'מתנדב',
         isActive: true
       },
@@ -59,6 +67,10 @@ const seedData = async () => {
           street: 'בן גוריון 30',
           city: 'חיפה',
           zipCode: '3498838'
+        },
+        location: {
+          type: 'Point',
+          coordinates: [34.9896, 32.7940]  // חיפה
         },
         role: 'מתנדב',
         isActive: true
@@ -76,11 +88,11 @@ const seedData = async () => {
         address: {
           street: 'רוטשילד 10',
           city: 'תל אביב',
-          zipCode: '6688310',
-          location: {
-            type: 'Point',
-            coordinates: [34.7818, 32.0853]  // תל אביב
-          }
+          zipCode: '6688310'
+        },
+        location: {
+          type: 'Point',
+          coordinates: [34.7818, 32.0853]  // תל אביב
         },
         emergencyContact: {
           name: 'משה גולדברג',
@@ -109,11 +121,11 @@ const seedData = async () => {
         address: {
           street: 'הנביאים 5',
           city: 'ירושלים',
-          zipCode: '9514205',
-          location: {
-            type: 'Point',
-            coordinates: [35.2137, 31.7683]  // ירושלים
-          }
+          zipCode: '9514205'
+        },
+        location: {
+          type: 'Point',
+          coordinates: [35.2137, 31.7683]  // ירושלים
         },
         emergencyContact: {
           name: 'שרה שפירא',
@@ -142,11 +154,11 @@ const seedData = async () => {
         address: {
           street: 'הים 20',
           city: 'חיפה',
-          zipCode: '3303520',
-          location: {
-            type: 'Point',
-            coordinates: [34.9896, 32.7940]  // חיפה
-          }
+          zipCode: '3303520'
+        },
+        location: {
+          type: 'Point',
+          coordinates: [34.9896, 32.7940]  // חיפה
         },
         emergencyContact: {
           name: 'יעקב פרץ',

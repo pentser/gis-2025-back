@@ -33,24 +33,24 @@ const volunteerSchema = new mongoose.Schema({
   address: {
     street: String,
     city: String,
-    zipCode: String,
-    location: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point'
-      },
-      coordinates: {
-        type: [Number],
-        required: true,
-        validate: {
-          validator: function(v) {
-            return v.length === 2 && 
-                   v[0] >= -180 && v[0] <= 180 && // longitude
-                   v[1] >= -90 && v[1] <= 90;     // latitude
-          },
-          message: 'נקודות ציון לא תקינות'
-        }
+    zipCode: String
+  },
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+      validate: {
+        validator: function(v) {
+          return v.length === 2 && 
+                 v[0] >= -180 && v[0] <= 180 && // longitude
+                 v[1] >= -90 && v[1] <= 90;     // latitude
+        },
+        message: 'נקודות ציון לא תקינות'
       }
     }
   },
@@ -75,7 +75,7 @@ const volunteerSchema = new mongoose.Schema({
 });
 
 // אינדקס גיאוגרפי למיקום
-volunteerSchema.index({ location: '2dsphere' });
+volunteerSchema.index({ 'location': '2dsphere' });
 
 // הצפנת סיסמה לפני שמירה
 volunteerSchema.pre('save', async function(next) {
