@@ -1,12 +1,12 @@
 .mapContainer {
-  width: 100%;
-  height: 100vh;
   position: relative;
+  height: 100%;
+  width: 100%;
 }
 
 .map {
-  width: 100%;
   height: 100%;
+  width: 100%;
 }
 
 /* עיצוב חלונות קופצים */
@@ -39,4 +39,41 @@
 
 .leaflet-default-shadow-path {
   background-image: url(https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png);
+}
+
+.mapLegend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background-color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  direction: rtl;
+  max-width: 250px;
+}
+
+.mapLegend h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 16px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.legendIcon {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: 8px;
+  border: 1px solid white;
+  box-shadow: 0 0 2px rgba(0,0,0,0.2);
 } 

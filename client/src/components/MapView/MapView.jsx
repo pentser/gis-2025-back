@@ -8,15 +8,9 @@ import './MapView.css';
 const createElderlyIcon = (urgency) => {
   // צבעים ותוויות לפי רמת דחיפות
   const colors = {
-    high: '#e74c3c', // אדום
-    medium: '#f39c12', // כתום
-    low: '#2ecc71' // ירוק
-  };
-  
-  const labels = {
-    high: 'ד',  // דחוף
-    medium: 'ב',  // בינוני
-    low: 'נ'   // נמוך
+    high: '#e74c3c', // אדום - דחיפות גבוהה
+    medium: '#f39c12', // כתום - דחיפות בינונית
+    low: '#2ecc71' // ירוק - דחיפות נמוכה
   };
 
   return new L.DivIcon({
@@ -27,40 +21,36 @@ const createElderlyIcon = (urgency) => {
       justify-content: center;
       background-color: ${colors[urgency]}; 
       color: white;
-      font-weight: bold;
-      font-size: 12px;
-      width: 24px; 
-      height: 24px; 
+      width: 16px; 
+      height: 16px; 
       border-radius: 50%; 
       border: 2px solid white;
       box-shadow: 0 0 4px rgba(0,0,0,0.4);
-    ">${labels[urgency]}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14]
+    "></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10]
   });
 };
 
-// אייקון פשוט למתנדבים
+// אייקון פשוט למתנדבים (סיכה שחורה)
 const volunteerIcon = new L.DivIcon({
   className: 'volunteer-marker',
   html: `<div style="
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #3498db; 
+    background-color: #000000; 
     color: white;
-    font-weight: bold;
-    font-size: 12px;
-    width: 24px; 
-    height: 24px; 
+    width: 14px; 
+    height: 14px; 
     border-radius: 50%; 
     border: 2px solid white;
     box-shadow: 0 0 4px rgba(0,0,0,0.4);
-  ">מ</div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-  popupAnchor: [0, -14]
+  "></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  popupAnchor: [0, -9]
 });
 
 // קומפוננטת עדכון מרכז המפה
@@ -267,6 +257,31 @@ const calculateOptimalRoute = (elderly, startPoint) => {
     .slice(0, 5); // מקסימום 5 נקודות במסלול
 };
 
+// קומפוננטת מקרא למפה
+const MapLegend = () => {
+  return (
+    <div className="map-legend">
+      <h3>מקרא</h3>
+      <div className="legend-item">
+        <div className="legend-icon" style={{ backgroundColor: '#e74c3c' }}></div>
+        <span>קשיש - דחיפות גבוהה (מעל 30 יום ללא ביקור)</span>
+      </div>
+      <div className="legend-item">
+        <div className="legend-icon" style={{ backgroundColor: '#f39c12' }}></div>
+        <span>קשיש - דחיפות בינונית (14-30 יום ללא ביקור)</span>
+      </div>
+      <div className="legend-item">
+        <div className="legend-icon" style={{ backgroundColor: '#2ecc71' }}></div>
+        <span>קשיש - דחיפות נמוכה (פחות מ-14 יום)</span>
+      </div>
+      <div className="legend-item">
+        <div className="legend-icon" style={{ backgroundColor: '#000000' }}></div>
+        <span>מתנדב</span>
+      </div>
+    </div>
+  );
+};
+
 // קומפוננטת המפה הראשית
 const MapView = () => {
   const [mapData, setMapData] = useState({ elderly: [], volunteers: [] });
@@ -446,6 +461,7 @@ const MapView = () => {
         />
         <FilterPanel filters={filters} setFilters={setFilters} />
         <StatsPanel mapData={mapData} />
+        <MapLegend />
       </div>
       
       <div className="map-wrapper">

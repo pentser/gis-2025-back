@@ -6,12 +6,38 @@ import api from '../../api/api';
 import styles from './Map.module.css';
 import 'leaflet/dist/leaflet.css';
 
-// יצירת אייקון מותאם לקשישים
-const elderlyIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34]
+// פונקציה לחישוב דחיפות הביקור
+const calculateUrgency = (elder) => {
+  if (!elder.lastVisit) return 'high'; // אם אין ביקור אחרון, דחיפות גבוהה
+  const daysSinceLastVisit = (Date.now() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24);
+  if (daysSinceLastVisit > 30) return 'high';
+  if (daysSinceLastVisit > 14) return 'medium';
+  return 'low';
+};
+
+// יצירת אייקונים פשוטים לזקנים לפי דחיפות
+const createElderlyIcon = (urgency) => {
+  // צבעים לפי רמת דחיפות
+  const colors = {
+    high: '#e74c3c', // אדום - דחיפות גבוהה
+    medium: '#f39c12', // כתום - דחיפות בינונית
+    low: '#2ecc71' // ירוק - דחיפות נמוכה
+  };
+
+  return new Icon({
+    iconUrl: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8' fill='${colors[urgency].replace('#', '%23')}' /%3E%3C/svg%3E`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -8]
+  });
+};
+
+// אייקון פשוט למתנדבים (סיכה שחורה)
+const volunteerIcon = new Icon({
+  iconUrl: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Ccircle cx='7' cy='7' r='7' fill='%23000000' /%3E%3C/svg%3E`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+  popupAnchor: [0, -7]
 });
 
 // קומפוננטה לעדכון מרכז המפה
@@ -21,6 +47,31 @@ const MapUpdater = ({ center }) => {
     map.setView(center);
   }, [center, map]);
   return null;
+};
+
+// קומפוננטת מקרא למפה
+const MapLegend = () => {
+  return (
+    <div className={styles.mapLegend}>
+      <h3>מקרא</h3>
+      <div className={styles.legendItem}>
+        <div className={styles.legendIcon} style={{ backgroundColor: '#e74c3c' }}></div>
+        <span>קשיש - דחיפות גבוהה (מעל 30 יום)</span>
+      </div>
+      <div className={styles.legendItem}>
+        <div className={styles.legendIcon} style={{ backgroundColor: '#f39c12' }}></div>
+        <span>קשיש - דחיפות בינונית (14-30 יום)</span>
+      </div>
+      <div className={styles.legendItem}>
+        <div className={styles.legendIcon} style={{ backgroundColor: '#2ecc71' }}></div>
+        <span>קשיש - דחיפות נמוכה (פחות מ-14 יום)</span>
+      </div>
+      <div className={styles.legendItem}>
+        <div className={styles.legendIcon} style={{ backgroundColor: '#000000' }}></div>
+        <span>מתנדב</span>
+      </div>
+    </div>
+  );
 };
 
 const Map = () => {
@@ -108,13 +159,17 @@ const Map = () => {
               elder.location.coordinates[1],
               elder.location.coordinates[0]
             ]}
-            icon={elderlyIcon}
+            icon={createElderlyIcon(calculateUrgency(elder))}
           >
             <Popup>
               <div>
                 <h3>{elder.firstName} {elder.lastName}</h3>
                 <p>כתובת: {elder.address.street}, {elder.address.city}</p>
                 <p>טלפון: {elder.phone}</p>
+                <p>דחיפות: {
+                  calculateUrgency(elder) === 'high' ? 'גבוהה' :
+                  calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
+                }</p>
                 {elder.needs?.length > 0 && (
                   <p>צרכים: {elder.needs.join(', ')}</p>
                 )}
@@ -123,6 +178,7 @@ const Map = () => {
           </Marker>
         ))}
       </MapContainer>
+      <MapLegend />
     </div>
   );
 };

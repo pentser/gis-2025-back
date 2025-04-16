@@ -206,6 +206,35 @@
   margin: 10px;
 }
 
+/* מקרא המפה */
+.map-legend {
+  padding: 15px;
+  background-color: #fff;
+  border-top: 1px solid #ddd;
+  margin-top: auto;
+}
+
+.map-legend h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.legend-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-left: 10px;
+  border: 1px solid white;
+  box-shadow: 0 0 3px rgba(0,0,0,0.2);
+}
+
 /* התאמה למובייל */
 @media (max-width: 768px) {
   .map-container {
