@@ -13,7 +13,7 @@ const createElderlyIcon = (urgency) => new L.Icon({
 });
 
 const volunteerIcon = new L.Icon({
-  iconUrl: '/icons/volunteer.png',
+  iconUrl: '/icons/volunteer.svg',
   iconSize: [35, 35],
   iconAnchor: [17, 35],
   popupAnchor: [0, -35]
