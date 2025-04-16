@@ -529,110 +529,115 @@ const MapView = () => {
 
   return (
     <div className="map-container">
-      <div className="sidebar">
-        <LocationSelector 
-          userLocation={userLocation}
-          onLocationChange={setUserLocation}
-        />
-        <FilterPanel filters={filters} setFilters={setFilters} />
-        <StatsPanel mapData={mapData} />
-        <MapLegend />
+      <div className="map-and-filters">
+        <div className="map-wrapper">
+          <MapContainer
+            center={userLocation}
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+          >
+            <MapUpdater center={userLocation} />
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            />
+
+            {/* סמן המיקום הנוכחי */}
+            <Marker
+              position={userLocation}
+              icon={new L.Icon({
+                iconUrl: '/icons/current-location.svg',
+                iconSize: [35, 35],
+                iconAnchor: [17, 17]
+              })}
+            >
+              <Popup>
+                <div className="popup-content">
+                  <h3>המיקום שלך</h3>
+                </div>
+              </Popup>
+            </Marker>
+
+            {/* סמנים עבור זקנים */}
+            {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly.map((elder) => (
+              elder && elder.location && elder.location.coordinates && elder.location.coordinates.length >= 2 ? (
+                <Marker
+                  key={elder._id}
+                  position={[elder.location.coordinates[1], elder.location.coordinates[0]]}
+                  icon={createElderlyIcon(calculateUrgency(elder))}
+                >
+                  <Popup>
+                    <div className="popup-content">
+                      <h3>{elder.firstName} {elder.lastName}</h3>
+                      <p>כתובת: {elder.address}</p>
+                      <p>סטטוס: {elder.status === 'פעיל' ? 'פעיל' : 'לא פעיל'}</p>
+                      <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
+                      <p>זמן מאז ביקור אחרון: {
+                        !elder.lastVisit ? 'אין ביקור קודם' :
+                        Math.floor((new Date() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)) + ' ימים'
+                      }</p>
+                      <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
+                      <p style={{
+                        fontWeight: 'bold', 
+                        color: calculateUrgency(elder) === 'high' ? '#e74c3c' :
+                              calculateUrgency(elder) === 'medium' ? '#f39c12' : '#2ecc71'
+                      }}>
+                        דחיפות: {
+                          calculateUrgency(elder) === 'high' ? 'גבוהה' :
+                          calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
+                        }
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ) : null
+            ))}
+
+            {/* סמנים עבור מתנדבים */}
+            {mapData.volunteers && mapData.volunteers.length > 0 && mapData.volunteers.map((volunteer) => (
+              volunteer && volunteer.location && volunteer.location.coordinates && volunteer.location.coordinates.length >= 2 ? (
+                <Marker
+                  key={volunteer._id}
+                  position={[volunteer.location.coordinates[1], volunteer.location.coordinates[0]]}
+                  icon={volunteerIcon}
+                >
+                  <Popup>
+                    <div className="popup-content">
+                      <h3>{volunteer.firstName} {volunteer.lastName}</h3>
+                      <p>סטטוס: {volunteer.status === 'available' ? 'זמין' : 'עסוק'}</p>
+                      <p>פעיל לאחרונה: {volunteer.lastActive ? new Date(volunteer.lastActive).toLocaleString('he-IL') : 'לא ידוע'}</p>
+                      <p>מרחק: {volunteer.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ) : null
+            ))}
+
+            {/* מסלול מומלץ */}
+            {filters.showRoute && routeCoordinates.length > 1 && (
+              <Polyline
+                positions={routeCoordinates}
+                color="#3498db"
+                weight={3}
+                opacity={0.8}
+                dashArray="10,10"
+              />
+            )}
+          </MapContainer>
+        </div>
+        
+        <div className="sidebar">
+          <LocationSelector 
+            userLocation={userLocation}
+            onLocationChange={setUserLocation}
+          />
+          <FilterPanel filters={filters} setFilters={setFilters} />
+          <MapLegend />
+        </div>
       </div>
       
-      <div className="map-wrapper">
-        <MapContainer
-          center={userLocation}
-          zoom={13}
-          style={{ height: '100%', width: '100%' }}
-        >
-          <MapUpdater center={userLocation} />
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-
-          {/* סמן המיקום הנוכחי */}
-          <Marker
-            position={userLocation}
-            icon={new L.Icon({
-              iconUrl: '/icons/current-location.svg',
-              iconSize: [35, 35],
-              iconAnchor: [17, 17]
-            })}
-          >
-            <Popup>
-              <div className="popup-content">
-                <h3>המיקום שלך</h3>
-              </div>
-            </Popup>
-          </Marker>
-
-          {/* סמנים עבור זקנים */}
-          {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly.map((elder) => (
-            elder && elder.location && elder.location.coordinates && elder.location.coordinates.length >= 2 ? (
-              <Marker
-                key={elder._id}
-                position={[elder.location.coordinates[1], elder.location.coordinates[0]]}
-                icon={createElderlyIcon(calculateUrgency(elder))}
-              >
-                <Popup>
-                  <div className="popup-content">
-                    <h3>{elder.firstName} {elder.lastName}</h3>
-                    <p>כתובת: {elder.address}</p>
-                    <p>סטטוס: {elder.status === 'פעיל' ? 'פעיל' : 'לא פעיל'}</p>
-                    <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
-                    <p>זמן מאז ביקור אחרון: {
-                      !elder.lastVisit ? 'אין ביקור קודם' :
-                      Math.floor((new Date() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)) + ' ימים'
-                    }</p>
-                    <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
-                    <p style={{
-                      fontWeight: 'bold', 
-                      color: calculateUrgency(elder) === 'high' ? '#e74c3c' :
-                             calculateUrgency(elder) === 'medium' ? '#f39c12' : '#2ecc71'
-                    }}>
-                      דחיפות: {
-                        calculateUrgency(elder) === 'high' ? 'גבוהה' :
-                        calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
-                      }
-                    </p>
-                  </div>
-                </Popup>
-              </Marker>
-            ) : null
-          ))}
-
-          {/* סמנים עבור מתנדבים */}
-          {mapData.volunteers && mapData.volunteers.length > 0 && mapData.volunteers.map((volunteer) => (
-            volunteer && volunteer.location && volunteer.location.coordinates && volunteer.location.coordinates.length >= 2 ? (
-              <Marker
-                key={volunteer._id}
-                position={[volunteer.location.coordinates[1], volunteer.location.coordinates[0]]}
-                icon={volunteerIcon}
-              >
-                <Popup>
-                  <div className="popup-content">
-                    <h3>{volunteer.firstName} {volunteer.lastName}</h3>
-                    <p>סטטוס: {volunteer.status === 'available' ? 'זמין' : 'עסוק'}</p>
-                    <p>פעיל לאחרונה: {volunteer.lastActive ? new Date(volunteer.lastActive).toLocaleString('he-IL') : 'לא ידוע'}</p>
-                    <p>מרחק: {volunteer.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
-                  </div>
-                </Popup>
-              </Marker>
-            ) : null
-          ))}
-
-          {/* מסלול מומלץ */}
-          {filters.showRoute && routeCoordinates.length > 1 && (
-            <Polyline
-              positions={routeCoordinates}
-              color="#3498db"
-              weight={3}
-              opacity={0.8}
-              dashArray="10,10"
-            />
-          )}
-        </MapContainer>
+      <div className="stats-container">
+        <StatsPanel mapData={mapData} />
       </div>
     </div>
   );
