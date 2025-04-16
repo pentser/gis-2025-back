@@ -4,19 +4,63 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
 
-// יצירת אייקונים מותאמים אישית
-const createElderlyIcon = (urgency) => new L.Icon({
-  iconUrl: `/icons/elderly-${urgency}.svg`,
-  iconSize: [35, 35],
-  iconAnchor: [17, 35],
-  popupAnchor: [0, -35]
-});
+// יצירת אייקונים פשוטים לזקנים לפי דחיפות
+const createElderlyIcon = (urgency) => {
+  // צבעים ותוויות לפי רמת דחיפות
+  const colors = {
+    high: '#e74c3c', // אדום
+    medium: '#f39c12', // כתום
+    low: '#2ecc71' // ירוק
+  };
+  
+  const labels = {
+    high: 'ד',  // דחוף
+    medium: 'ב',  // בינוני
+    low: 'נ'   // נמוך
+  };
 
-const volunteerIcon = new L.Icon({
-  iconUrl: '/icons/volunteer.svg',
-  iconSize: [35, 35],
-  iconAnchor: [17, 35],
-  popupAnchor: [0, -35]
+  return new L.DivIcon({
+    className: 'elderly-marker',
+    html: `<div style="
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: ${colors[urgency]}; 
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      width: 24px; 
+      height: 24px; 
+      border-radius: 50%; 
+      border: 2px solid white;
+      box-shadow: 0 0 4px rgba(0,0,0,0.4);
+    ">${labels[urgency]}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14]
+  });
+};
+
+// אייקון פשוט למתנדבים
+const volunteerIcon = new L.DivIcon({
+  className: 'volunteer-marker',
+  html: `<div style="
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #3498db; 
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    width: 24px; 
+    height: 24px; 
+    border-radius: 50%; 
+    border: 2px solid white;
+    box-shadow: 0 0 4px rgba(0,0,0,0.4);
+  ">מ</div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+  popupAnchor: [0, -14]
 });
 
 // קומפוננטת עדכון מרכז המפה
