@@ -79,11 +79,20 @@ const LocationSelector = ({ userLocation, onLocationChange }) => {
 
 // קומפוננטת סטטיסטיקות
 const StatsPanel = ({ mapData }) => {
+  // וידוא שהנתונים קיימים ותקינים
+  const elderly = Array.isArray(mapData.elderly) ? mapData.elderly : [];
+  const volunteers = Array.isArray(mapData.volunteers) ? mapData.volunteers : [];
+  
+  // חישוב סטטיסטיקות בצורה בטוחה
   const stats = {
-    totalElderly: mapData.elderly.length,
-    needVisit: mapData.elderly.filter(e => e.status === 'needs_visit').length,
-    availableVolunteers: mapData.volunteers.filter(v => v.status === 'available').length,
-    averageDistance: mapData.elderly.reduce((acc, curr) => acc + curr.distanceFromCurrentLocation, 0) / mapData.elderly.length || 0
+    totalElderly: elderly.length,
+    needVisit: elderly.filter(e => e && e.status === 'needs_visit').length,
+    availableVolunteers: volunteers.filter(v => v && v.status === 'available').length,
+    averageDistance: elderly.length > 0 
+      ? elderly.reduce((acc, curr) => curr && curr.distanceFromCurrentLocation 
+          ? acc + curr.distanceFromCurrentLocation 
+          : acc, 0) / elderly.length 
+      : 0
   };
 
   return (
@@ -395,89 +404,91 @@ const MapView = () => {
         <StatsPanel mapData={mapData} />
       </div>
       
-      <MapContainer
-        center={userLocation}
-        zoom={13}
-        style={{ height: '100%', width: '100%' }}
-      >
-        <MapUpdater center={userLocation} />
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-
-        {/* סמן המיקום הנוכחי */}
-        <Marker
-          position={userLocation}
-          icon={new L.Icon({
-            iconUrl: '/icons/current-location.svg',
-            iconSize: [35, 35],
-            iconAnchor: [17, 17]
-          })}
+      <div className="map-wrapper">
+        <MapContainer
+          center={userLocation}
+          zoom={13}
+          style={{ height: '100%', width: '100%' }}
         >
-          <Popup>
-            <div className="popup-content">
-              <h3>המיקום שלך</h3>
-            </div>
-          </Popup>
-        </Marker>
-
-        {/* סמנים עבור זקנים */}
-        {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly.map((elder) => (
-          elder && elder.location && elder.location.coordinates && elder.location.coordinates.length >= 2 ? (
-            <Marker
-              key={elder._id}
-              position={[elder.location.coordinates[1], elder.location.coordinates[0]]}
-              icon={createElderlyIcon(calculateUrgency(elder))}
-            >
-              <Popup>
-                <div className="popup-content">
-                  <h3>{elder.firstName} {elder.lastName}</h3>
-                  <p>כתובת: {elder.address}</p>
-                  <p>סטטוס: {elder.status === 'needs_visit' ? 'זקוק לביקור' : 'בוקר לאחרונה'}</p>
-                  <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
-                  <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
-                  <p>דחיפות: {
-                    calculateUrgency(elder) === 'high' ? 'גבוהה' :
-                    calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
-                  }</p>
-                </div>
-              </Popup>
-            </Marker>
-          ) : null
-        ))}
-
-        {/* סמנים עבור מתנדבים */}
-        {mapData.volunteers && mapData.volunteers.length > 0 && mapData.volunteers.map((volunteer) => (
-          volunteer && volunteer.location && volunteer.location.coordinates && volunteer.location.coordinates.length >= 2 ? (
-            <Marker
-              key={volunteer._id}
-              position={[volunteer.location.coordinates[1], volunteer.location.coordinates[0]]}
-              icon={volunteerIcon}
-            >
-              <Popup>
-                <div className="popup-content">
-                  <h3>{volunteer.firstName} {volunteer.lastName}</h3>
-                  <p>סטטוס: {volunteer.status === 'available' ? 'זמין' : 'עסוק'}</p>
-                  <p>פעיל לאחרונה: {volunteer.lastActive ? new Date(volunteer.lastActive).toLocaleString('he-IL') : 'לא ידוע'}</p>
-                  <p>מרחק: {volunteer.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
-                </div>
-              </Popup>
-            </Marker>
-          ) : null
-        ))}
-
-        {/* מסלול מומלץ */}
-        {filters.showRoute && routeCoordinates.length > 1 && (
-          <Polyline
-            positions={routeCoordinates}
-            color="#3498db"
-            weight={3}
-            opacity={0.8}
-            dashArray="10,10"
+          <MapUpdater center={userLocation} />
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
-        )}
-      </MapContainer>
+
+          {/* סמן המיקום הנוכחי */}
+          <Marker
+            position={userLocation}
+            icon={new L.Icon({
+              iconUrl: '/icons/current-location.svg',
+              iconSize: [35, 35],
+              iconAnchor: [17, 17]
+            })}
+          >
+            <Popup>
+              <div className="popup-content">
+                <h3>המיקום שלך</h3>
+              </div>
+            </Popup>
+          </Marker>
+
+          {/* סמנים עבור זקנים */}
+          {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly.map((elder) => (
+            elder && elder.location && elder.location.coordinates && elder.location.coordinates.length >= 2 ? (
+              <Marker
+                key={elder._id}
+                position={[elder.location.coordinates[1], elder.location.coordinates[0]]}
+                icon={createElderlyIcon(calculateUrgency(elder))}
+              >
+                <Popup>
+                  <div className="popup-content">
+                    <h3>{elder.firstName} {elder.lastName}</h3>
+                    <p>כתובת: {elder.address}</p>
+                    <p>סטטוס: {elder.status === 'needs_visit' ? 'זקוק לביקור' : 'בוקר לאחרונה'}</p>
+                    <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
+                    <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
+                    <p>דחיפות: {
+                      calculateUrgency(elder) === 'high' ? 'גבוהה' :
+                      calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
+                    }</p>
+                  </div>
+                </Popup>
+              </Marker>
+            ) : null
+          ))}
+
+          {/* סמנים עבור מתנדבים */}
+          {mapData.volunteers && mapData.volunteers.length > 0 && mapData.volunteers.map((volunteer) => (
+            volunteer && volunteer.location && volunteer.location.coordinates && volunteer.location.coordinates.length >= 2 ? (
+              <Marker
+                key={volunteer._id}
+                position={[volunteer.location.coordinates[1], volunteer.location.coordinates[0]]}
+                icon={volunteerIcon}
+              >
+                <Popup>
+                  <div className="popup-content">
+                    <h3>{volunteer.firstName} {volunteer.lastName}</h3>
+                    <p>סטטוס: {volunteer.status === 'available' ? 'זמין' : 'עסוק'}</p>
+                    <p>פעיל לאחרונה: {volunteer.lastActive ? new Date(volunteer.lastActive).toLocaleString('he-IL') : 'לא ידוע'}</p>
+                    <p>מרחק: {volunteer.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
+                  </div>
+                </Popup>
+              </Marker>
+            ) : null
+          ))}
+
+          {/* מסלול מומלץ */}
+          {filters.showRoute && routeCoordinates.length > 1 && (
+            <Polyline
+              positions={routeCoordinates}
+              color="#3498db"
+              weight={3}
+              opacity={0.8}
+              dashArray="10,10"
+            />
+          )}
+        </MapContainer>
+      </div>
     </div>
   );
 };

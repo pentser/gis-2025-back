@@ -49,18 +49,6 @@ export default function Layout() {
         >
           <Sidebar onClose={handleDrawerToggle} />
         </Drawer>
-
-        {/* תפריט לדסקטופ */}
-        <Drawer
-          variant="permanent"
-          anchor="right"
-          classes={{
-            paper: styles.drawerPaper
-          }}
-          className={styles.desktopDrawer}
-        >
-          <Sidebar />
-        </Drawer>
       </Box>
 
       <Box component="main" className={styles.content}>
