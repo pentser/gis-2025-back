@@ -8,11 +8,58 @@ import 'leaflet/dist/leaflet.css';
 
 // פונקציה לחישוב דחיפות הביקור
 const calculateUrgency = (elder) => {
-  if (!elder.lastVisit) return 'high'; // אם אין ביקור אחרון, דחיפות גבוהה
-  const daysSinceLastVisit = (Date.now() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24);
-  if (daysSinceLastVisit > 30) return 'high';
-  if (daysSinceLastVisit > 14) return 'medium';
-  return 'low';
+  // אם הקשיש לא פעיל, תמיד מחזירים דחיפות נמוכה
+  if (elder.status === 'inactive') {
+    console.log('קשיש לא פעיל - דחיפות נמוכה');
+    return 'low';
+  }
+
+  // הדפסת מידע מפורט על הקשיש בתחילת הפונקציה
+  console.log('----------------------------------------');
+  console.log('חישוב דחיפות לקשיש:', elder._id);
+  console.log('שם הקשיש:', elder.firstName, elder.lastName);
+  console.log('סטטוס:', elder.status);
+  console.log('תאריך ביקור אחרון:', elder.lastVisit);
+
+  try {
+    // אם הסטטוס הוא 'visited' אבל אין תאריך ביקור אחרון, מעדכנים לדחיפות בינונית
+    if (elder.status === 'visited' && !elder.lastVisit) {
+      console.log('סטטוס הוא visited אך חסר תאריך ביקור אחרון - דחיפות בינונית');
+      return 'medium';
+    }
+    
+    // אם אין תאריך ביקור אחרון, דחיפות גבוהה
+    if (!elder.lastVisit) {
+      console.log('אין תאריך ביקור אחרון - דחיפות גבוהה');
+      return 'high';
+    }
+
+    const lastVisitDate = new Date(elder.lastVisit);
+    const today = new Date();
+    console.log('תאריך היום:', today.toISOString());
+    console.log('תאריך ביקור אחרון לאחר המרה:', lastVisitDate.toISOString());
+
+    // חישוב מספר הימים מאז הביקור האחרון
+    const timeDiff = today.getTime() - lastVisitDate.getTime();
+    const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+    console.log('מספר ימים מאז הביקור האחרון:', daysDiff);
+
+    // עדכון הדחיפות בהתאם למספר הימים
+    if (daysDiff > 21) {
+      console.log('דחיפות גבוהה (יותר מ-21 יום)');
+      return 'high';
+    } else if (daysDiff > 10) {
+      console.log('דחיפות בינונית (בין 10 ל-21 יום)');
+      return 'medium';
+    } else {
+      console.log('דחיפות נמוכה (פחות מ-10 ימים)');
+      return 'low';
+    }
+  } catch (error) {
+    console.error('שגיאה בחישוב דחיפות:', error);
+    console.log('מחזיר דחיפות גבוהה בשל שגיאה');
+    return 'high';
+  }
 };
 
 // יצירת אייקונים פשוטים לזקנים לפי דחיפות
@@ -56,15 +103,15 @@ const MapLegend = () => {
       <h3>מקרא</h3>
       <div className={styles.legendItem}>
         <div className={styles.legendIcon} style={{ backgroundColor: '#e74c3c' }}></div>
-        <span>קשיש - דחיפות גבוהה (מעל 30 יום)</span>
+        <span>קשיש - דחיפות גבוהה (מעל 21 יום)</span>
       </div>
       <div className={styles.legendItem}>
         <div className={styles.legendIcon} style={{ backgroundColor: '#f39c12' }}></div>
-        <span>קשיש - דחיפות בינונית (14-30 יום)</span>
+        <span>קשיש - דחיפות בינונית (10-21 יום)</span>
       </div>
       <div className={styles.legendItem}>
         <div className={styles.legendIcon} style={{ backgroundColor: '#2ecc71' }}></div>
-        <span>קשיש - דחיפות נמוכה (פחות מ-14 יום)</span>
+        <span>קשיש - דחיפות נמוכה (פחות מ-10 יום)</span>
       </div>
       <div className={styles.legendItem}>
         <div className={styles.legendIcon} style={{ backgroundColor: '#000000' }}></div>
@@ -104,6 +151,7 @@ const Map = () => {
   // קבלת קשישים בקרבת מקום
   const fetchNearbyElderly = async (longitude, latitude) => {
     try {
+      console.log(`שליחת בקשת API לקבלת קשישים בקרבת מקום: long=${longitude}, lat=${latitude}`);
       const response = await api.get('/api/elderly/nearby', {
         params: {
           longitude,
@@ -111,6 +159,23 @@ const Map = () => {
           maxDistance: 5000 // 5 ק"מ
         }
       });
+      
+      console.log('תגובת API התקבלה בהצלחה:', response.status);
+      console.log('סוג תגובה:', typeof response.data);
+      console.log('אורך התגובה:', Array.isArray(response.data) ? response.data.length : 'לא מערך');
+      
+      // בדיקת נתוני הקשישים
+      console.log('=== נתוני קשישים שהתקבלו ===');
+      response.data.forEach(elder => {
+        console.log(`שם: ${elder.firstName} ${elder.lastName}, ID: ${elder._id}`);
+        console.log(`סטטוס: ${elder.status}, תאריך ביקור אחרון: ${elder.lastVisit}`);
+        if (elder.lastVisit) {
+          console.log(`תאריך לאחר המרה: ${new Date(elder.lastVisit).toISOString()}`);
+          console.log(`ימים מאז ביקור אחרון: ${((Date.now() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)).toFixed(1)}`);
+        }
+        console.log('----------------------');
+      });
+      
       setElderly(response.data);
     } catch (error) {
       console.error('שגיאה בטעינת קשישים:', error);
@@ -121,6 +186,19 @@ const Map = () => {
   const fetchAllElderly = async () => {
     try {
       const response = await api.get('/api/elderly');
+      
+      // בדיקת נתוני הקשישים
+      console.log('=== נתוני כל הקשישים ===');
+      response.data.forEach(elder => {
+        console.log(`שם: ${elder.firstName} ${elder.lastName}, ID: ${elder._id}`);
+        console.log(`סטטוס: ${elder.status}, תאריך ביקור אחרון: ${elder.lastVisit}`);
+        if (elder.lastVisit) {
+          console.log(`תאריך לאחר המרה: ${new Date(elder.lastVisit).toISOString()}`);
+          console.log(`ימים מאז ביקור אחרון: ${((Date.now() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)).toFixed(1)}`);
+        }
+        console.log('----------------------');
+      });
+      
       setElderly(response.data);
     } catch (error) {
       console.error('שגיאה בטעינת קשישים:', error);
@@ -152,31 +230,39 @@ const Map = () => {
         )}
 
         {/* סימון הקשישים */}
-        {elderly.map((elder) => (
-          <Marker
-            key={elder._id}
-            position={[
-              elder.location.coordinates[1],
-              elder.location.coordinates[0]
-            ]}
-            icon={createElderlyIcon(calculateUrgency(elder))}
-          >
-            <Popup>
-              <div>
-                <h3>{elder.firstName} {elder.lastName}</h3>
-                <p>כתובת: {elder.address.street}, {elder.address.city}</p>
-                <p>טלפון: {elder.phone}</p>
-                <p>דחיפות: {
-                  calculateUrgency(elder) === 'high' ? 'גבוהה' :
-                  calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
-                }</p>
-                {elder.needs?.length > 0 && (
-                  <p>צרכים: {elder.needs.join(', ')}</p>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {elderly.map((elder) => {
+          console.log(`מציג קשיש על המפה: ${elder.firstName} ${elder.lastName}, דחיפות: ${calculateUrgency(elder)}`);
+          return (
+            <Marker
+              key={elder._id}
+              position={[
+                elder.location.coordinates[1],
+                elder.location.coordinates[0]
+              ]}
+              icon={createElderlyIcon(calculateUrgency(elder))}
+            >
+              <Popup>
+                <div>
+                  <h3>{elder.firstName} {elder.lastName}</h3>
+                  <p>כתובת: {elder.address.street}, {elder.address.city}</p>
+                  <p>טלפון: {elder.phone}</p>
+                  <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
+                  <p>זמן מאז ביקור אחרון: {
+                    !elder.lastVisit ? 'אין ביקור קודם' :
+                    Math.floor((new Date() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)) + ' ימים'
+                  }</p>
+                  <p>דחיפות: {
+                    calculateUrgency(elder) === 'high' ? 'גבוהה' :
+                    calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
+                  }</p>
+                  {elder.needs?.length > 0 && (
+                    <p>צרכים: {elder.needs.join(', ')}</p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
       <MapLegend />
     </div>

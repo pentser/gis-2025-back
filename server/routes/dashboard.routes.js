@@ -80,18 +80,29 @@ router.get('/map', async (req, res) => {
           return null; // דילוג על ערירי ללא מיקום תקין
         }
         
-        const daysSinceLastVisit = elder.lastVisit 
-          ? Math.floor((Date.now() - new Date(elder.lastVisit.date)) / (1000 * 60 * 60 * 24))
-          : Infinity;
-          
+        // טיפול במקרה שאין תאריך ביקור אחרון
+        let daysSinceLastVisit = Infinity;
+        let lastVisitDate = null;
+        
+        if (elder.lastVisit) {
+          lastVisitDate = elder.lastVisit.date || elder.lastVisit; // טיפול בשני מבנים אפשריים
+          daysSinceLastVisit = Math.floor((Date.now() - new Date(lastVisitDate)) / (1000 * 60 * 60 * 24));
+        }
+        
+        // קביעת סטטוס - מאפשר גם קשישים עם סטטוס visited שאין להם תאריך ביקור
+        let status = 'needs_visit';
+        if (elder.status === 'visited' || daysSinceLastVisit <= 14) {
+          status = 'visited';
+        }
+        
         return {
           _id: elder._id,
           firstName: elder.firstName,
           lastName: elder.lastName,
           address: elder.address ? `${elder.address.street}, ${elder.address.city}` : 'כתובת לא ידועה',
           location: elder.location,
-          status: daysSinceLastVisit > 14 ? 'needs_visit' : 'visited',
-          lastVisit: elder.lastVisit ? elder.lastVisit.date : null,
+          status: status,
+          lastVisit: lastVisitDate,
           distanceFromCurrentLocation: calculateDistance(
             lat, 
             lng, 

@@ -235,23 +235,77 @@ const FilterPanel = ({ filters, setFilters }) => {
 
 // פונקציה לחישוב דחיפות הביקור
 const calculateUrgency = (elder) => {
-  const daysSinceLastVisit = (Date.now() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24);
-  if (daysSinceLastVisit > 30) return 'high';
-  if (daysSinceLastVisit > 14) return 'medium';
-  return 'low';
+  // אם הקשיש לא פעיל, תמיד מחזירים דחיפות נמוכה
+  if (elder.status === 'inactive') {
+    console.log('קשיש לא פעיל - דחיפות נמוכה');
+    return 'low';
+  }
+
+  // הדפסת מידע מפורט על הקשיש בתחילת הפונקציה
+  console.log('----------------------------------------');
+  console.log('חישוב דחיפות לקשיש:', elder._id);
+  console.log('שם הקשיש:', elder.firstName, elder.lastName);
+  console.log('סטטוס:', elder.status);
+  console.log('תאריך ביקור אחרון:', elder.lastVisit);
+
+  try {
+    // אם הסטטוס הוא 'visited' אבל אין תאריך ביקור אחרון, מעדכנים לדחיפות בינונית
+    if (elder.status === 'visited' && !elder.lastVisit) {
+      console.log('סטטוס הוא visited אך חסר תאריך ביקור אחרון - דחיפות בינונית');
+      return 'medium';
+    }
+    
+    // אם אין תאריך ביקור אחרון, דחיפות גבוהה
+    if (!elder.lastVisit) {
+      console.log('אין תאריך ביקור אחרון - דחיפות גבוהה');
+      return 'high';
+    }
+
+    const lastVisitDate = new Date(elder.lastVisit);
+    const today = new Date();
+    console.log('תאריך היום:', today.toISOString());
+    console.log('תאריך ביקור אחרון לאחר המרה:', lastVisitDate.toISOString());
+
+    // חישוב מספר הימים מאז הביקור האחרון
+    const timeDiff = today.getTime() - lastVisitDate.getTime();
+    const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+    console.log('מספר ימים מאז הביקור האחרון:', daysDiff);
+
+    // עדכון הדחיפות בהתאם למספר הימים
+    if (daysDiff > 21) {
+      console.log('דחיפות גבוהה (יותר מ-21 יום)');
+      return 'high';
+    } else if (daysDiff > 10) {
+      console.log('דחיפות בינונית (בין 10 ל-21 יום)');
+      return 'medium';
+    } else {
+      console.log('דחיפות נמוכה (פחות מ-10 ימים)');
+      return 'low';
+    }
+  } catch (error) {
+    console.error('שגיאה בחישוב דחיפות:', error);
+    console.log('מחזיר דחיפות גבוהה בשל שגיאה');
+    return 'high';
+  }
 };
 
 // פונקציה לחישוב מסלול אופטימלי
 const calculateOptimalRoute = (elderly, startPoint) => {
   // מיון לפי דחיפות ומרחק
   return elderly
-    .filter(elder => elder.status === 'needs_visit')
+    // מסנן רק קשישים פעילים
+    .filter(elder => elder.status === 'פעיל')
     .sort((a, b) => {
       const urgencyA = calculateUrgency(a);
       const urgencyB = calculateUrgency(b);
       if (urgencyA !== urgencyB) {
-        return urgencyA === 'high' ? -1 : 1;
+        // דחיפות גבוהה תתקבל תחילה, אחריה בינונית, ולבסוף נמוכה
+        if (urgencyA === 'high') return -1;
+        if (urgencyB === 'high') return 1;
+        if (urgencyA === 'medium') return -1;
+        return 1;
       }
+      // אם הדחיפות זהה, מיין לפי מרחק
       return a.distanceFromCurrentLocation - b.distanceFromCurrentLocation;
     })
     .slice(0, 5); // מקסימום 5 נקודות במסלול
@@ -264,15 +318,15 @@ const MapLegend = () => {
       <h3>מקרא</h3>
       <div className="legend-item">
         <div className="legend-icon" style={{ backgroundColor: '#e74c3c' }}></div>
-        <span>קשיש - דחיפות גבוהה (מעל 30 יום ללא ביקור)</span>
+        <span>דחיפות גבוהה (מעל 21 יום ללא ביקור או אין ביקור כלל)</span>
       </div>
       <div className="legend-item">
         <div className="legend-icon" style={{ backgroundColor: '#f39c12' }}></div>
-        <span>קשיש - דחיפות בינונית (14-30 יום ללא ביקור)</span>
+        <span>דחיפות בינונית (בין 11 ל-21 יום ללא ביקור)</span>
       </div>
       <div className="legend-item">
         <div className="legend-icon" style={{ backgroundColor: '#2ecc71' }}></div>
-        <span>קשיש - דחיפות נמוכה (פחות מ-14 יום)</span>
+        <span>דחיפות נמוכה (פחות מ-10 ימים או קשיש לא פעיל)</span>
       </div>
       <div className="legend-item">
         <div className="legend-icon" style={{ backgroundColor: '#000000' }}></div>
@@ -414,6 +468,27 @@ const MapView = () => {
           );
         }
         
+        // פילטור לפי ימים מאז ביקור אחרון
+        if (filters.lastVisitDays) {
+          const days = parseInt(filters.lastVisitDays);
+          data.elderly = data.elderly.filter(elder => {
+            // אם הסטטוס 'visited', כולל אותו גם אם אין תאריך
+            if (elder.status === 'visited' && !elder.lastVisit) {
+              return true;
+            }
+            
+            // אם יש תאריך ביקור אחרון, בדוק אם הוא בטווח הזמן המבוקש
+            if (elder.lastVisit) {
+              const lastVisitDate = new Date(elder.lastVisit);
+              const daysSinceLastVisit = Math.floor((Date.now() - lastVisitDate.getTime()) / (1000 * 60 * 60 * 24));
+              return daysSinceLastVisit <= days;
+            }
+            
+            // אם אין תאריך ביקור אחרון וסטטוס לא 'visited', לא כולל
+            return false;
+          });
+        }
+        
         setMapData(data);
       } catch (error) {
         console.error('שגיאה בטעינת נתוני המפה:', error);
@@ -504,13 +579,23 @@ const MapView = () => {
                   <div className="popup-content">
                     <h3>{elder.firstName} {elder.lastName}</h3>
                     <p>כתובת: {elder.address}</p>
-                    <p>סטטוס: {elder.status === 'needs_visit' ? 'זקוק לביקור' : 'בוקר לאחרונה'}</p>
+                    <p>סטטוס: {elder.status === 'פעיל' ? 'פעיל' : 'לא פעיל'}</p>
                     <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
-                    <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
-                    <p>דחיפות: {
-                      calculateUrgency(elder) === 'high' ? 'גבוהה' :
-                      calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
+                    <p>זמן מאז ביקור אחרון: {
+                      !elder.lastVisit ? 'אין ביקור קודם' :
+                      Math.floor((new Date() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)) + ' ימים'
                     }</p>
+                    <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
+                    <p style={{
+                      fontWeight: 'bold', 
+                      color: calculateUrgency(elder) === 'high' ? '#e74c3c' :
+                             calculateUrgency(elder) === 'medium' ? '#f39c12' : '#2ecc71'
+                    }}>
+                      דחיפות: {
+                        calculateUrgency(elder) === 'high' ? 'גבוהה' :
+                        calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
+                      }
+                    </p>
                   </div>
                 </Popup>
               </Marker>

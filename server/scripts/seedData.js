@@ -1,10 +1,18 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import Volunteer from '../models/volunteer.model.js';
 import Elderly from '../models/elderly.model.js';
 
-dotenv.config();
+// יצירת נתיב מדויק לקובץ .env
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = resolve(__dirname, '../.env');
+
+// טעינת משתני הסביבה מהקובץ .env
+dotenv.config({ path: envPath });
 
 // מידע של ערים בארץ עם קואורדינטות
 const cities = [
@@ -132,16 +140,16 @@ const seedData = async () => {
     
     // מתנדבי ברירת מחדל (מנהלים)
     volunteers.push({
-      firstName: 'דוד',
-      lastName: 'כהן',
-      email: 'david@example.com',
-      password: hashedPassword,
-      phone: '0501234567',
-      address: {
-        street: 'הרצל 1',
-        city: 'תל אביב',
-        zipCode: '6123001'
-      },
+        firstName: 'דוד',
+        lastName: 'כהן',
+        email: 'david@example.com',
+        password: hashedPassword,
+        phone: '0501234567',
+        address: {
+          street: 'הרצל 1',
+          city: 'תל אביב',
+          zipCode: '6123001'
+        },
       location: {
         type: 'Point',
         coordinates: [34.7818, 32.0853]  // תל אביב
@@ -152,16 +160,16 @@ const seedData = async () => {
     });
     
     volunteers.push({
-      firstName: 'שרה',
-      lastName: 'לוי',
-      email: 'sara@example.com',
-      password: hashedPassword,
-      phone: '0502345678',
-      address: {
-        street: 'ויצמן 15',
-        city: 'רחובות',
-        zipCode: '7610001'
-      },
+        firstName: 'שרה',
+        lastName: 'לוי',
+        email: 'sara@example.com',
+        password: hashedPassword,
+        phone: '0502345678',
+        address: {
+          street: 'ויצמן 15',
+          city: 'רחובות',
+          zipCode: '7610001'
+        },
       location: {
         type: 'Point',
         coordinates: [34.8114, 31.8928]  // רחובות
@@ -176,11 +184,11 @@ const seedData = async () => {
       firstName: 'יעקב',
       lastName: 'ישראלי',
       email: 'yaakov@example.com',
-      password: hashedPassword,
-      phone: '0503456789',
-      address: {
+        password: hashedPassword,
+        phone: '0503456789',
+        address: {
         street: 'הנשיא 5',
-        city: 'חיפה',
+          city: 'חיפה',
         zipCode: '3106301'
       },
       location: {
@@ -194,18 +202,18 @@ const seedData = async () => {
     
     // הוספת מנהל נוסף בדרום הארץ
     volunteers.push({
-      firstName: 'רחל',
+        firstName: 'רחל',
       lastName: 'אברהם',
       email: 'rachel@example.com',
       password: hashedPassword,
       phone: '0504567890',
-      address: {
+        address: {
         street: 'דרך הנגב 10',
         city: 'באר שבע',
         zipCode: '8489310'
       },
-      location: {
-        type: 'Point',
+          location: {
+            type: 'Point',
         coordinates: [34.7913, 31.2529]  // באר שבע
       },
       role: 'מנהל',
@@ -220,14 +228,14 @@ const seedData = async () => {
       email: 'moshe@example.com',
       password: hashedPassword,
       phone: '0505678901',
-      address: {
+        address: {
         street: 'יפו 20',
-        city: 'ירושלים',
+          city: 'ירושלים',
         zipCode: '9422108'
       },
-      location: {
-        type: 'Point',
-        coordinates: [35.2137, 31.7683]  // ירושלים
+          location: {
+            type: 'Point',
+            coordinates: [35.2137, 31.7683]  // ירושלים
       },
       role: 'מנהל',
       isActive: true,
@@ -333,18 +341,33 @@ const seedData = async () => {
     
     // קביעת ביקורים אחרונים: חלק בדחיפות גבוהה, חלק בינונית וחלק נמוכה
     const getLastVisit = () => {
-      const randomFactor = Math.random();
-      
-      if (randomFactor < 0.33) {
-        // דחיפות גבוהה: לפני יותר מ-30 יום
-        return getRandomDate(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
-      } else if (randomFactor < 0.66) {
-        // דחיפות בינונית: בין 14-30 יום
-        return getRandomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date(Date.now() - 14 * 24 * 60 * 60 * 1000));
-      } else {
-        // דחיפות נמוכה: בתוך 14 יום אחרונים
-        return getRandomDate(new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), new Date());
+      // בחלק מהמקרים, אין ביקור כלל
+      if (Math.random() < 0.1) {
+        return null; // אין ביקור אחרון
       }
+      
+      const randomFactor = Math.random();
+      let date;
+      
+      if (randomFactor < 0.4) { // 40% דחיפות גבוהה
+        // דחיפות גבוהה: לפני יותר מ-21 יום
+        date = getRandomDate(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), new Date(Date.now() - 21 * 24 * 60 * 60 * 1000));
+      } else if (randomFactor < 0.7) { // 30% דחיפות בינונית
+        // דחיפות בינונית: בין 10-21 יום
+        date = getRandomDate(new Date(Date.now() - 21 * 24 * 60 * 60 * 1000), new Date(Date.now() - 10 * 24 * 60 * 60 * 1000));
+      } else { // 30% דחיפות נמוכה
+        // דחיפות נמוכה: בתוך 10 ימים אחרונים
+        date = getRandomDate(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), new Date());
+      }
+      
+      console.log(`סוג תאריך: ${typeof date}, תאריך: ${date}, ISO: ${date.toISOString()}`);
+      return date;
+    };
+    
+    // קביעת סטטוס הקשיש לפי תאריך הביקור האחרון
+    const getElderlyStatus = (lastVisit) => {
+      // כל הקשישים פעילים, אבל נשתמש בשדה ה-lastVisit כדי לקבוע דחיפות
+      return 'פעיל';
     };
     
     // יצירת 200 קשישים בפריסה ארצית
@@ -374,8 +397,8 @@ const seedData = async () => {
           city: city.name,
           zipCode: '1234567'
         },
-        location: {
-          type: 'Point',
+          location: {
+            type: 'Point',
           coordinates
         },
         emergencyContact: {
@@ -394,7 +417,7 @@ const seedData = async () => {
           preferredDays: getRandomArrayItems(preferredDays, 4),
           preferredTime: preferredTimes[Math.floor(Math.random() * preferredTimes.length)]
         },
-        status: 'פעיל',
+        status: getElderlyStatus(getLastVisit()),
         lastVisit: getLastVisit()
       });
     }
@@ -408,6 +431,12 @@ const seedData = async () => {
     console.log('נתוני הדמה הוכנסו בהצלחה:');
     console.log(`- ${volunteers.length} מתנדבים נוספו`);
     console.log(`- ${elderly.length} קשישים נוספו`);
+    
+    // הדפסת נתוני קשיש לדוגמה
+    console.log('=== דוגמה לנתוני קשיש ===');
+    console.log(JSON.stringify(elderly[0], null, 2));
+    console.log('=== סוף דוגמה ===');
+    
     process.exit(0);
   } catch (error) {
     console.error('שגיאה בהכנסת נתוני הדמה:', error);
