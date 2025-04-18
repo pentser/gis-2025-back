@@ -53,9 +53,6 @@ const Navbar = ({ onMenuClick }) => {
                   לוח בקרה
                 </Button>
               )}
-              <Button color="inherit" onClick={handleLogout}>
-                התנתק
-              </Button>
             </>
           ) : (
             <>

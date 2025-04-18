@@ -1,15 +1,26 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { AppBar, Box, CssBaseline, Drawer, IconButton, Toolbar, Typography } from '@mui/material';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { AppBar, Box, CssBaseline, Drawer, IconButton, Toolbar, Typography, Button } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import LogoutIcon from '@mui/icons-material/Logout';
 import Sidebar from './Sidebar';
 import styles from './Layout.module.css';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isDashboard = location.pathname === '/dashboard';
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -26,9 +37,18 @@ export default function Layout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap>
+          <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
             מערכת ניטור קשישים
           </Typography>
+          {user && isDashboard && (
+            <Button 
+              color="inherit" 
+              onClick={handleLogout}
+              startIcon={<LogoutIcon />}
+            >
+              התנתק
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
 
