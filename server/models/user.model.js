@@ -29,6 +29,29 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'volunteer', 'elderly'],
     required: [true, 'נדרש תפקיד']
   },
+  address: {
+    type: String,
+    trim: true
+  },
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      validate: {
+        validator: function(v) {
+          // וידוא שהמערך מכיל 2 מספרים וערכיהם בטווח תקין
+          return v.length === 2 && 
+                 v[0] >= -180 && v[0] <= 180 && // longitude
+                 v[1] >= -90 && v[1] <= 90;     // latitude
+        },
+        message: 'נקודות ציון לא תקינות'
+      }
+    }
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -47,6 +70,9 @@ userSchema.methods.toJSON = function() {
   delete user.tokens;
   return user;
 };
+
+// הוספת אינדקס גיאוגרפי למיקום
+userSchema.index({ location: '2dsphere' });
 
 const User = mongoose.model('User', userSchema);
 

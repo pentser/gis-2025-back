@@ -3,6 +3,8 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
+import { useAuth } from '../../context/AuthContext';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 
 // יצירת אייקונים פשוטים לזקנים לפי דחיפות
 const createElderlyIcon = (urgency) => {
@@ -62,8 +64,8 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
-// קומפוננטת בחירת מיקום
-const LocationSelector = ({ userLocation, onLocationChange }) => {
+// קומפוננטת בחירת מיקום משופרת עם כפתור GPS
+const LocationSelector = ({ userLocation, onLocationChange, useGpsLocation }) => {
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -93,19 +95,28 @@ const LocationSelector = ({ userLocation, onLocationChange }) => {
 
   return (
     <div className="location-selector">
-      <input
-        type="text"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-        placeholder="הכנס כתובת..."
-        className="address-input"
-      />
+      <div className="location-input-container">
+        <input
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="הכנס כתובת..."
+          className="address-input"
+        />
+        <button 
+          onClick={geocodeAddress}
+          disabled={isLoading}
+          className="address-button"
+        >
+          {isLoading ? 'מחפש...' : 'עדכן מיקום'}
+        </button>
+      </div>
       <button 
-        onClick={geocodeAddress}
-        disabled={isLoading}
-        className="address-button"
+        onClick={useGpsLocation}
+        className="gps-button"
+        title="השתמש במיקום GPS נוכחי"
       >
-        {isLoading ? 'מחפש...' : 'עדכן מיקום'}
+        <MyLocationIcon /> השתמש במיקום הנוכחי
       </button>
     </div>
   );
@@ -349,48 +360,239 @@ const MapView = () => {
   });
   const [userLocation, setUserLocation] = useState(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    // ניסיון לקבל את המיקום מה-GPS
+  // פונקציה לקבלת מיקום מה-GPS
+  const getGpsLocation = () => {
+    setIsLoadingLocation(true);
+    console.log('מנסה לקבל מיקום GPS...');
+    
+    if (!navigator.geolocation) {
+      console.error('דפדפן לא תומך ב-Geolocation API');
+      setUserLocation([32.0853, 34.7818]); // ברירת מחדל - תל אביב
+      setIsLoadingLocation(false);
+      return;
+    }
+    
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation([position.coords.latitude, position.coords.longitude]);
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        console.log('התקבל מיקום GPS:', lat, lon);
+        setUserLocation([lat, lon]);
         setIsLoadingLocation(false);
       },
-      async (error) => {
-        console.error('שגיאה בקבלת מיקום GPS:', error);
-        
-        try {
-          // קבלת כתובת ברירת המחדל מהפרופיל
-          const response = await fetch('/api/auth/me');
-          const userData = await response.json();
-          
-          if (userData.address) {
-            // המרת הכתובת לקואורדינטות
-            const geocodeResponse = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(userData.address)}, Israel`
-            );
-            const geocodeData = await geocodeResponse.json();
-            
-            if (geocodeData && geocodeData[0]) {
-              setUserLocation([parseFloat(geocodeData[0].lat), parseFloat(geocodeData[0].lon)]);
-            } else {
-              // אם לא נמצאו קואורדינטות, שימוש במיקום ברירת מחדל (תל אביב)
-              setUserLocation([32.0853, 34.7818]);
-            }
-          } else {
-            // אם אין כתובת בפרופיל, שימוש במיקום ברירת מחדל
-            setUserLocation([32.0853, 34.7818]);
-          }
-        } catch (fetchError) {
-          console.error('שגיאה בקבלת נתוני משתמש:', fetchError);
-          setUserLocation([32.0853, 34.7818]);
-        } finally {
-          setIsLoadingLocation(false);
+      (error) => {
+        console.error('שגיאה בקבלת מיקום GPS:', error.code, error.message);
+        // פירוט קודי השגיאה לצורך ניפוי טוב יותר
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            console.error('משתמש דחה בקשת מיקום');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            console.error('מידע מיקום לא זמין');
+            break;
+          case error.TIMEOUT:
+            console.error('פג זמן בקשת המיקום');
+            break;
+          case error.UNKNOWN_ERROR:
+            console.error('שגיאה לא ידועה');
+            break;
         }
+        
+        // אם יש כבר מיקום, נשאר בו, אחרת נשתמש בברירת המחדל
+        if (!userLocation) {
+          console.log('אין מיקום קיים, משתמש בברירת מחדל - תל אביב');
+          setUserLocation([32.0853, 34.7818]); // ברירת מחדל - תל אביב
+        } else {
+          console.log('נשאר עם המיקום הקיים:', userLocation);
+        }
+        setIsLoadingLocation(false);
+      },
+      { 
+        enableHighAccuracy: true, 
+        timeout: 10000, 
+        maximumAge: 60000 
       }
     );
-  }, []);
+  };
+
+  // פונקציה להמרת כתובת לקואורדינטות
+  const geocodeAddress = async (address) => {
+    if (!address) return null;
+    
+    try {
+      console.log('מנסה להמיר כתובת:', address);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}, Israel`
+      );
+      const data = await response.json();
+      
+      if (data && data[0]) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        console.log('התקבלו קואורדינטות:', lat, lon);
+        
+        if (isNaN(lat) || isNaN(lon)) {
+          console.error('קואורדינטות לא תקינות');
+          return null;
+        }
+        
+        return [lat, lon];
+      }
+      console.log('לא נמצאו קואורדינטות לכתובת');
+      return null;
+    } catch (error) {
+      console.error('שגיאה בהמרת כתובת לקואורדינטות:', error);
+      return null;
+    }
+  };
+  
+  // פונקציה לקבלת מיקום המשתמש מהשרת
+  const getUserLocation = async () => {
+    try {
+      console.log('מנסה לקבל מיקום משתמש מהשרת');
+      // לוודא שיש טוקן
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('אין טוקן, לא ניתן לבקש מיקום מהשרת');
+        return null;
+      }
+
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        console.error(`שגיאת שרת: ${response.status} - ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('תוכן השגיאה:', errorText);
+        throw new Error(`שגיאת שרת: ${response.status}`);
+      }
+      
+      // לוודא שהנתונים בפורמט JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('התגובה אינה בפורמט JSON:', contentType);
+        throw new Error('התגובה אינה בפורמט JSON');
+      }
+
+      const userData = await response.json();
+      console.log('מידע משתמש מהשרת (מלא):', JSON.stringify(userData));
+      
+      // בדיקה מפורטת יותר אם יש מיקום שמור תקין
+      if (userData.location) {
+        console.log('נמצא שדה מיקום במידע המשתמש:', JSON.stringify(userData.location));
+        
+        try {
+          // בדיקה שיש קואורדינטות
+          if (userData.location.coordinates && Array.isArray(userData.location.coordinates) && userData.location.coordinates.length >= 2) {
+            const coordinates = userData.location.coordinates;
+            console.log('קואורדינטות גולמיות מהשרת:', coordinates);
+            
+            // נסה להמיר למספרים אם צריך
+            const lon = parseFloat(coordinates[0]);
+            const lat = parseFloat(coordinates[1]);
+            
+            console.log('אחרי המרה למספרים:', {lon, lat});
+            
+            // וידוא שהערכים הם מספרים תקינים
+            if (!isNaN(lon) && !isNaN(lat) && 
+                lon >= -180 && lon <= 180 && 
+                lat >= -90 && lat <= 90) {
+              
+              // שים לב: ב-GeoJSON הסדר הוא [lon, lat], אבל ב-Leaflet הסדר הוא [lat, lon]
+              console.log('קואורדינטות תקינות מהמסד נתונים, ממיר לפורמט Leaflet:', [lat, lon]);
+              
+              // החזר מיד את המיקום - אל תמשיך לבדוק דברים אחרים
+              return [lat, lon]; // ממיר לפורמט של Leaflet
+            } else {
+              console.error('ערכי קואורדינטות מחוץ לטווח או לא תקינים:', {lon, lat});
+            }
+          } else {
+            console.log('אין קואורדינטות תקינות במיקום, מבנה המיקום:', userData.location);
+          }
+        } catch (locationErr) {
+          console.error('שגיאה בעיבוד מיקום המשתמש:', locationErr);
+        }
+      } else {
+        console.log('אין שדה מיקום במידע המשתמש');
+      }
+      
+      // אם הגענו לכאן, אין קואורדינטות תקינות במיקום
+      
+      // אם אין מיקום שמור אבל יש כתובת, ננסה להמיר אותה
+      if (userData.address) {
+        console.log('מנסה להמיר כתובת המשתמש:', userData.address);
+        const addressCoords = await geocodeAddress(userData.address);
+        if (addressCoords) {
+          console.log('התקבלו קואורדינטות מהכתובת:', addressCoords);
+          return addressCoords;
+        } else {
+          console.log('לא התקבלו קואורדינטות מהכתובת');
+        }
+      } else {
+        console.log('אין כתובת במידע המשתמש');
+      }
+      
+      console.log('לא נמצא מיקום תקין מהשרת, חוזר null');
+      return null;
+    } catch (error) {
+      console.error('שגיאה בקבלת מידע משתמש:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    // קודם כל, ננסה להשתמש במיקום המשתמש מהשרת או מהכתובת
+    const loadInitialLocation = async () => {
+      setIsLoadingLocation(true);
+      
+      // קודם ננסה לקבל מיקום מהשרת
+      console.log('מתחיל טעינת מיקום התחלתי...');
+      const serverLocation = await getUserLocation();
+      
+      if (serverLocation) {
+        console.log('התקבל מיקום מהשרת/כתובת, משתמש בו:', serverLocation);
+        setUserLocation(serverLocation);
+        setIsLoadingLocation(false);
+        return;
+      }
+      
+      console.log('לא התקבל מיקום מהשרת, בודק כתובת משתמש...');
+      
+      // אם אין מיקום מהשרת ויש כתובת למשתמש, ננסה להמיר אותה
+      if (user && user.address) {
+        try {
+          console.log('מנסה להשתמש בכתובת המשתמש ממצב האפליקציה:', user.address);
+          const coordinates = await geocodeAddress(user.address);
+          
+          if (coordinates) {
+            console.log('התקבלו קואורדינטות מהכתובת:', coordinates);
+            setUserLocation(coordinates);
+            setIsLoadingLocation(false);
+            return;
+          } else {
+            console.log('לא נמצאו קואורדינטות לכתובת המשתמש');
+          }
+        } catch (error) {
+          console.error('שגיאה בהמרת כתובת המשתמש:', error);
+        }
+      } else {
+        console.log('אין כתובת משתמש במצב האפליקציה');
+      }
+      
+      // אם לא הצלחנו לקבל מיקום בדרכים אחרות, ננסה עם GPS
+      console.log('מנסה להשתמש ב-GPS כאפשרות אחרונה');
+      getGpsLocation();
+    };
+
+    loadInitialLocation();
+  }, [user]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -630,6 +832,7 @@ const MapView = () => {
           <LocationSelector 
             userLocation={userLocation}
             onLocationChange={setUserLocation}
+            useGpsLocation={getGpsLocation}
           />
           <FilterPanel filters={filters} setFilters={setFilters} />
           <MapLegend />

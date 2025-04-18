@@ -20,7 +20,8 @@ const Register = () => {
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    address: ''
   });
   const [error, setError] = useState('');
 
@@ -95,6 +96,18 @@ const Register = () => {
                 autoComplete="email"
                 value={formData.email}
                 onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                required
+                fullWidth
+                label="כתובת מלאה"
+                name="address"
+                placeholder="רחוב, מספר, עיר"
+                value={formData.address}
+                onChange={handleChange}
+                helperText="הכתובת תשמש להצגת המפה בהתאמה אישית"
               />
             </Grid>
             <Grid item xs={12}>
