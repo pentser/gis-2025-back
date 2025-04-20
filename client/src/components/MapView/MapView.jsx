@@ -202,7 +202,7 @@ const FilterPanel = ({ filters, setFilters }) => {
         >
           <option value="">הכל</option>
           <option value="needs_visit">זקוק לביקור</option>
-          <option value="visited">בוקר לאחרונה</option>
+          <option value="visited">ביקר לאחרונה</option>
         </select>
       </div>
 
@@ -606,8 +606,21 @@ const MapView = () => {
         const queryParams = new URLSearchParams({
           lat: userLocation[0],
           lng: userLocation[1],
-          ...filters
+          radius: filters.radius
         });
+        
+        // הוספת פרמטרים נוספים רק אם הם לא ריקים
+        if (filters.elderlyStatus) {
+          queryParams.append('elderlyStatus', filters.elderlyStatus);
+        }
+        
+        if (filters.volunteerStatus) {
+          queryParams.append('volunteerStatus', filters.volunteerStatus);
+        }
+        
+        if (filters.lastVisitDays) {
+          queryParams.append('lastVisitDays', filters.lastVisitDays);
+        }
 
         console.log('שולח בקשה ל-API:', `/api/dashboard/map?${queryParams}`);
         const response = await fetch(`/api/dashboard/map?${queryParams}`);
