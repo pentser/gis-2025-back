@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import User from '../models/user.model.js';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+import { createLinkedVolunteer, findVolunteerByUserId, updateVolunteerByUserId } from '../utils/userVolunteerLink.js';
 
 dotenv.config();
 
@@ -40,7 +41,7 @@ const geocodeAddress = async (address) => {
 // הרשמת משתמש חדש
 export const register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role = 'volunteer', address } = req.body;
+    const { email, password, firstName, lastName, role = 'volunteer', address, phone } = req.body;
 
     // בדיקה אם המשתמש כבר קיים
     const existingUser = await User.findOne({ email });
@@ -66,7 +67,7 @@ export const register = async (req, res) => {
       }
     }
 
-    // יצירת משתמש חדש
+    // יצירת נתוני משתמש חדש
     const userData = {
       email,
       password: hashedPassword,
@@ -82,11 +83,40 @@ export const register = async (req, res) => {
       userData.location = location;
     }
     
-    console.log('נתוני משתמש לשמירה:', userData);
-    const user = await User.create(userData);
+    let user;
+    let token;
+
+    // אם המשתמש הוא מתנדב, נשתמש בפונקציית הקישור
+    if (role === 'volunteer') {
+      console.log('יוצר משתמש מתנדב מקושר');
+      
+      // נתוני המתנדב
+      const volunteerData = {
+        email,
+        firstName, 
+        lastName,
+        phone: phone || '', // שדה חובה במודל המתנדב
+        address: {
+          street: address || '', // מבנה כתובת שונה במודל המתנדב
+          city: ''
+        },
+        location: location,
+        role: 'מתנדב'
+      };
+      
+      // יצירת משתמש ומתנדב מקושרים
+      const { user: newUser, volunteer } = await createLinkedVolunteer(userData, volunteerData);
+      user = newUser;
+      
+      console.log('נוצר משתמש מתנדב:', user._id, 'מקושר למתנדב:', volunteer._id);
+    } else {
+      // יצירת משתמש רגיל (לא מתנדב)
+      console.log('נתוני משתמש לשמירה:', userData);
+      user = await User.create(userData);
+    }
 
     // יצירת טוקן
-    const token = jwt.sign(
+    token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -138,6 +168,26 @@ export const login = async (req, res) => {
     if (!isPasswordValid) {
       console.log('סיסמה שגויה עבור משתמש:', email);
       return res.status(401).json({ message: 'סיסמה שגויה' });
+    }
+
+    // אם המשתמש הוא מתנדב, נביא גם מידע מהמודל של המתנדב
+    let volunteerData = null;
+    if (user.role === 'volunteer') {
+      try {
+        const volunteer = await findVolunteerByUserId(user._id);
+        if (volunteer) {
+          console.log('נמצא מתנדב מקושר:', volunteer._id);
+          volunteerData = volunteer;
+          
+          // עדכון תאריך התחברות אחרונה של המתנדב
+          volunteer.lastLogin = new Date();
+          await volunteer.save();
+        } else {
+          console.log('לא נמצא מתנדב מקושר למשתמש:', user._id);
+        }
+      } catch (volunteerErr) {
+        console.error('שגיאה בקבלת מידע המתנדב:', volunteerErr);
+      }
     }
 
     // תיקון מבנה מיקום לא תקין (אם יש) - בנפרד מתהליך האימות
@@ -277,6 +327,15 @@ export const login = async (req, res) => {
       address: user.address
     };
 
+    // הוספת נתוני המתנדב בתגובה אם קיימים
+    if (volunteerData) {
+      userResponse.volunteer = {
+        id: volunteerData._id,
+        status: volunteerData.status || 'available',
+        lastLogin: volunteerData.lastLogin
+      };
+    }
+
     console.log('שולח תגובה:', { token });
 
     return res.status(200).json({
@@ -407,6 +466,36 @@ export const updateProfile = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ message: 'משתמש לא נמצא' });
+    }
+
+    // אם המשתמש הוא מתנדב, עדכן גם את הרשומה במודל המתנדב
+    if (user.role === 'volunteer') {
+      try {
+        // מכין את הנתונים לעדכון המתנדב
+        const volunteerUpdateData = {};
+        
+        if (req.body.firstName) volunteerUpdateData.firstName = req.body.firstName;
+        if (req.body.lastName) volunteerUpdateData.lastName = req.body.lastName;
+        if (req.body.phone) volunteerUpdateData.phone = req.body.phone;
+        
+        if (req.body.address) {
+          volunteerUpdateData.address = {
+            street: req.body.address,
+            city: ''
+          };
+        }
+        
+        if (req.body.location) {
+          volunteerUpdateData.location = req.body.location;
+        }
+        
+        // עדכון המתנדב המקושר
+        const updatedVolunteer = await updateVolunteerByUserId(user._id, volunteerUpdateData);
+        console.log('עודכן מתנדב מקושר:', updatedVolunteer ? updatedVolunteer._id : 'לא נמצא');
+      } catch (volunteerUpdateError) {
+        console.error('שגיאה בעדכון המתנדב המקושר:', volunteerUpdateError);
+        // נמשיך גם אם יש שגיאה בעדכון המתנדב
+      }
     }
 
     res.json(user);
