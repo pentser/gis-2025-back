@@ -1,5 +1,7 @@
 import express from 'express';
 import { auth } from '../middleware/auth.middleware.js';
+import Visit from '../models/visit.model.js';
+import Elderly from '../models/elderly.model.js';
 
 const router = express.Router();
 
@@ -15,16 +17,62 @@ router.get('/', auth, async (req, res) => {
 // קבלת סטטיסטיקות ביקורים
 router.get('/stats', auth, async (req, res) => {
   try {
-    // כרגע מחזיר נתוני דמה
+    // שליפת נתונים אמיתיים
+    const totalVisits = await Visit.countDocuments();
+    
+    // חישוב ביקורים שהושלמו ובהמתנה
+    const completedVisits = await Visit.countDocuments({ status: 'completed' });
+    const pendingVisits = await Visit.countDocuments({ status: 'pending' });
+    
+    // חישוב זמן ממוצע של ביקור
+    const visitsWithDuration = await Visit.find({
+      previousVisit: { $exists: true },
+      lastVisit: { $exists: true }
+    });
+    
+    let averageVisitDuration = 0;
+    if (visitsWithDuration.length > 0) {
+      const totalDuration = visitsWithDuration.reduce((sum, visit) => {
+        const duration = new Date(visit.lastVisit) - new Date(visit.previousVisit);
+        return sum + (duration > 0 ? duration / (1000 * 60) : 0); // המרה לדקות
+      }, 0);
+      averageVisitDuration = totalDuration / visitsWithDuration.length;
+    }
+    
+    // ביקורים השבוע ובשבוע שעבר
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    
+    const visitsThisWeek = await Visit.countDocuments({
+      lastVisit: { $gte: oneWeekAgo }
+    });
+    
+    const visitsLastWeek = await Visit.countDocuments({
+      lastVisit: { $gte: twoWeeksAgo, $lt: oneWeekAgo }
+    });
+    
+    // חישוב מספר קשישים ייחודיים
+    const uniqueElders = await Visit.aggregate([
+      { $group: { _id: '$elder' } },
+      { $count: 'count' }
+    ]);
+    
+    const uniqueEldersCount = uniqueElders.length > 0 ? uniqueElders[0].count : 0;
+    
     res.json({
-      totalVisits: 0,
-      completedVisits: 0,
-      pendingVisits: 0,
-      averageVisitDuration: 0,
-      visitsThisWeek: 0,
-      visitsLastWeek: 0
+      totalVisits,
+      completedVisits,
+      pendingVisits,
+      averageVisitDuration,
+      visitsThisWeek,
+      visitsLastWeek,
+      uniqueEldersCount
     });
   } catch (error) {
+    console.error('שגיאה בקבלת סטטיסטיקות:', error);
     res.status(500).json({ message: 'שגיאה בקבלת סטטיסטיקות' });
   }
 });
@@ -32,20 +80,43 @@ router.get('/stats', auth, async (req, res) => {
 // קבלת ביקורים דחופים
 router.get('/urgent', auth, async (req, res) => {
   try {
-    // כרגע מחזיר נתוני דמה
-    res.json([
-      {
+    // הגדרת תאריך לפני 14 יום
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    
+    // שליפת קשישים שלא ביקרו אותם למעלה מ-14 יום
+    const eldersNeedingVisits = await Elderly.find({
+      $or: [
+        { lastVisit: { $lt: twoWeeksAgo } },
+        { lastVisit: { $exists: false } }
+      ]
+    }).populate('lastVisit');
+    
+    // עיבוד התוצאות
+    const urgentVisits = eldersNeedingVisits.map(elder => {
+      const lastVisitDate = elder.lastVisit ? new Date(elder.lastVisit) : null;
+      const daysSinceLastVisit = lastVisitDate 
+        ? Math.floor((Date.now() - lastVisitDate) / (1000 * 60 * 60 * 24)) 
+        : 30; // ברירת מחדל אם אין ביקור קודם
+      
+      return {
         elder: {
-          _id: '1',
-          firstName: 'ישראל',
-          lastName: 'ישראלי',
-          address: 'רחוב הרצל 1, תל אביב'
+          _id: elder._id,
+          firstName: elder.firstName,
+          lastName: elder.lastName,
+          address: elder.address ? `${elder.address.street || ''}, ${elder.address.city || ''}` : 'כתובת לא ידועה'
         },
-        lastVisit: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // לפני 30 יום
-        daysSinceLastVisit: 30
-      }
-    ]);
+        lastVisit: lastVisitDate || new Date(0),
+        daysSinceLastVisit: daysSinceLastVisit
+      };
+    });
+    
+    // מיון לפי דחיפות (מספר ימים מאז הביקור האחרון)
+    urgentVisits.sort((a, b) => b.daysSinceLastVisit - a.daysSinceLastVisit);
+    
+    res.json(urgentVisits);
   } catch (error) {
+    console.error('שגיאה בקבלת ביקורים דחופים:', error);
     res.status(500).json({ message: 'שגיאה בקבלת ביקורים דחופים' });
   }
 });

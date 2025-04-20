@@ -68,6 +68,20 @@
   border-radius: 4px;
 }
 
+.dashboardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboardHeader h2 {
+  margin: 0;
+}
+
+.refreshButton {
+  margin-right: 10px;
+}
+
 @media (max-width: 600px) {
   .dashboard {
     padding: var(--spacing-md);

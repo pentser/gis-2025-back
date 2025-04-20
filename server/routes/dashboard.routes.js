@@ -9,12 +9,38 @@ const router = express.Router();
 // נתיב לקבלת נתוני לוח הבקרה
 router.get('/', auth, async (req, res) => {
   try {
-    // כרגע מחזיר נתוני דמה
+    // שליפת נתונים אמיתיים מהמסד נתונים
+    const totalVisits = await Visit.countDocuments();
+    const uniqueEldersCount = await Elder.countDocuments();
+    
+    // חישוב ממוצע אורך ביקור
+    const visitsWithDuration = await Visit.find({
+      previousVisit: { $exists: true },
+      lastVisit: { $exists: true }
+    });
+    
+    let averageVisitLength = 0;
+    if (visitsWithDuration.length > 0) {
+      const totalDuration = visitsWithDuration.reduce((sum, visit) => {
+        const duration = visit.lastVisit - visit.previousVisit;
+        return sum + (duration > 0 ? duration : 0);
+      }, 0);
+      averageVisitLength = totalDuration / visitsWithDuration.length;
+    }
+    
+    // חישוב מספר הביקורים בשבוע האחרון
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const visitsThisWeek = await Visit.countDocuments({
+      lastVisit: { $gte: oneWeekAgo }
+    });
+    
     res.json({
-      totalVisits: 0,
-      uniqueEldersCount: 0,
-      averageVisitLength: 0,
-      visitsThisWeek: 0
+      totalVisits,
+      uniqueEldersCount,
+      averageVisitLength,
+      visitsThisWeek
     });
   } catch (error) {
     console.error('שגיאה בקבלת נתוני לוח הבקרה:', error);

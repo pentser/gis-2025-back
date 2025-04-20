@@ -10,6 +10,8 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
+import Button from '@mui/material/Button';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { fetchVisitStats, fetchUrgentVisits } from '../../services/api';
 import MapView from '../MapView/MapView';
 import styles from './Dashboard.module.css';
@@ -51,8 +53,17 @@ const Dashboard = () => {
   return (
     <div className={styles.dashboard}>
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid item xs={12} className={styles.dashboardHeader}>
           <h2>לוח בקרה</h2>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<RefreshIcon />}
+            onClick={loadDashboardData}
+            className={styles.refreshButton}
+          >
+            רענון נתונים
+          </Button>
         </Grid>
 
         <Grid item xs={12} md={4}>
