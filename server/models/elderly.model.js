@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const elderlySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    unique: true
+  },
   firstName: {
     type: String,
     required: [true, 'שם פרטי הוא שדה חובה'],
