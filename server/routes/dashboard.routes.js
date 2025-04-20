@@ -27,7 +27,7 @@ router.get('/map', async (req, res) => {
   try {
     console.log('קבלת בקשה לנתוני מפה:', req.query);
     
-    const { lat, lng, radius = 10 } = req.query;
+    const { lat, lng, radius = 10, elderlyStatus, volunteerStatus, lastVisitDays } = req.query;
     
     // בדיקות תקינות
     if (!lat || !lng) {
@@ -103,6 +103,7 @@ router.get('/map', async (req, res) => {
           location: elder.location,
           status: status,
           lastVisit: lastVisitDate,
+          daysSinceLastVisit: daysSinceLastVisit,
           distanceFromCurrentLocation: calculateDistance(
             lat, 
             lng, 
@@ -111,6 +112,30 @@ router.get('/map', async (req, res) => {
           )
         };
       }).filter(elder => elder !== null); // סינון ערירים ללא מיקום תקין
+
+      // פילטור לפי ימים מאז ביקור אחרון
+      let filteredByLastVisit = processedElderly;
+      if (lastVisitDays && parseInt(lastVisitDays) > 0) {
+        const days = parseInt(lastVisitDays);
+        filteredByLastVisit = processedElderly.filter(elder => {
+          // אם אין תאריך ביקור, לא כולל בתוצאות
+          if (!elder.lastVisit) return false;
+          
+          // מכליל רק אם מספר הימים מאז הביקור האחרון קטן או שווה למספר הימים שצוין
+          return elder.daysSinceLastVisit <= days;
+        });
+        console.log(`סינון לפי ביקור אחרון (${days} ימים): ${filteredByLastVisit.length} קשישים`);
+      }
+      
+      // פילטור לפי סטטוס קשישים
+      let filteredElderly = filteredByLastVisit;
+      if (elderlyStatus === 'needs_visit') {
+        filteredElderly = filteredByLastVisit.filter(elder => elder.status === 'needs_visit');
+        console.log(`סינון לפי 'זקוק לביקור': ${filteredElderly.length} קשישים`);
+      } else if (elderlyStatus === 'visited') {
+        filteredElderly = filteredByLastVisit.filter(elder => elder.status === 'visited');
+        console.log(`סינון לפי 'ביקר לאחרונה': ${filteredElderly.length} קשישים`);
+      }
 
       const processedVolunteers = volunteers.map(volunteer => {
         // וידוא שיש מיקום תקין
@@ -135,14 +160,24 @@ router.get('/map', async (req, res) => {
         };
       }).filter(volunteer => volunteer !== null); // סינון מתנדבים ללא מיקום תקין
 
+      // פילטור לפי סטטוס מתנדבים
+      let filteredVolunteers = processedVolunteers;
+      if (volunteerStatus === 'available') {
+        filteredVolunteers = processedVolunteers.filter(volunteer => volunteer.status === 'available');
+        console.log(`סינון לפי מתנדבים 'זמינים': ${filteredVolunteers.length} מתנדבים`);
+      } else if (volunteerStatus === 'busy') {
+        filteredVolunteers = processedVolunteers.filter(volunteer => volunteer.status === 'busy');
+        console.log(`סינון לפי מתנדבים 'עסוקים': ${filteredVolunteers.length} מתנדבים`);
+      }
+
       const result = {
-        elderly: processedElderly,
-        volunteers: processedVolunteers
+        elderly: filteredElderly,
+        volunteers: filteredVolunteers
       };
       
       console.log('מחזיר תשובה עם:', {
-        elderlyCount: processedElderly.length,
-        volunteersCount: processedVolunteers.length
+        elderlyCount: filteredElderly.length,
+        volunteersCount: filteredVolunteers.length
       });
       
       res.json(result);
