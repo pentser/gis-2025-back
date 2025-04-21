@@ -8,8 +8,14 @@ const router = express.Router();
 // קבלת כל הביקורים
 router.get('/', auth, async (req, res) => {
   try {
-    res.json([]);  // כרגע מחזיר מערך ריק
+    const visits = await Visit.find({})
+      .populate('elder', 'firstName lastName')
+      .populate('volunteer', 'firstName lastName')
+      .sort({ lastVisit: -1 });
+    
+    res.json(visits);
   } catch (error) {
+    console.error('שגיאה בקבלת הביקורים:', error);
     res.status(500).json({ message: 'שגיאה בקבלת הביקורים' });
   }
 });
@@ -133,8 +139,35 @@ router.get('/:id', auth, async (req, res) => {
 // יצירת ביקור חדש
 router.post('/', auth, async (req, res) => {
   try {
-    res.status(201).json({}); // כרגע מחזיר אובייקט ריק
+    const { elderlyId, date, duration, notes, status } = req.body;
+    
+    if (!elderlyId) {
+      return res.status(400).json({ message: 'נדרש לציין קשיש' });
+    }
+    
+    const visit = new Visit({
+      elder: elderlyId,
+      volunteer: req.user._id,
+      lastVisit: date || new Date(),
+      visitSummary: notes,
+      duration,
+      status
+    });
+    
+    await visit.save();
+    
+    // עדכון תאריך ביקור אחרון בפרטי הקשיש
+    await Elderly.findByIdAndUpdate(elderlyId, {
+      lastVisit: visit.lastVisit,
+      visitSummary: notes
+    });
+    
+    await visit.populate('elder', 'firstName lastName');
+    await visit.populate('volunteer', 'firstName lastName');
+    
+    res.status(201).json(visit);
   } catch (error) {
+    console.error('שגיאה ביצירת ביקור:', error);
     res.status(500).json({ message: 'שגיאה ביצירת הביקור' });
   }
 });

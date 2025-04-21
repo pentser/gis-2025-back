@@ -22,6 +22,15 @@ const visitSchema = new mongoose.Schema({
   visitSummary: {
     type: String,
     trim: true
+  },
+  duration: {
+    type: Number,
+    min: 0
+  },
+  status: {
+    type: String,
+    enum: ['מתוכנן', 'בוצע', 'בוטל'],
+    default: 'מתוכנן'
   }
 }, {
   timestamps: true

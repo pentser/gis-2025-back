@@ -89,16 +89,16 @@ const VisitList = () => {
               <Card className={styles.card}>
                 <CardContent>
                   <Typography variant="h6">
-                    {visit.elderlyName}
+                    {visit.elder ? `${visit.elder.firstName} ${visit.elder.lastName}` : 'שם הקשיש לא ידוע'}
                   </Typography>
                   <Typography color="textSecondary">
-                    תאריך: {new Date(visit.date).toLocaleDateString('he-IL')}
+                    תאריך: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleDateString('he-IL') : 'תאריך לא ידוע'}
                   </Typography>
                   <Typography color="textSecondary">
-                    שעה: {new Date(visit.date).toLocaleTimeString('he-IL')}
+                    שעה: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleTimeString('he-IL') : 'שעה לא ידועה'}
                   </Typography>
                   <Typography color="textSecondary">
-                    סטטוס: {visit.status}
+                    סטטוס: {visit.status || 'לא ידוע'}
                   </Typography>
                   <div className={styles.actions}>
                     <IconButton
