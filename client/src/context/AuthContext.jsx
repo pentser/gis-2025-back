@@ -53,17 +53,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (formData) => {
     try {
       setError(null);
-      console.log('מנסה להתחבר עם:', { email });
+      const { email, password, role } = formData;
+      
+      if (!email || !password) {
+        throw new Error('נדרש אימייל וסיסמה');
+      }
+
+      console.log('מנסה להתחבר עם:', { email, role });
       
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, role })
       });
 
       const data = await response.json();

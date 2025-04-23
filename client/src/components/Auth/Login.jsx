@@ -1,25 +1,45 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
   Typography,
   TextField,
   Button,
-  Grid,
-  Link as MuiLink
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
-import styles from './Auth.module.css';
+import styles from './Login.module.css';
 
 const Login = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    role: 'volunteer' // ברירת מחדל - מתנדב
   });
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.email) {
+      errors.email = 'נדרש אימייל';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'אימייל לא תקין';
+    }
+    if (!formData.password) {
+      errors.password = 'נדרשת סיסמה';
+    }
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,79 +47,100 @@ const Login = () => {
       ...prev,
       [name]: value
     }));
+    // נקה שגיאת וולידציה כשהשדה משתנה
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
+    if (!validateForm()) {
+      return;
+    }
+
     try {
-      await login(formData.email, formData.password);
-      navigate('/');
+      await login(formData);
+      // ניתוב בהתאם לסוג המשתמש
+      if (formData.role === 'admin') {
+        navigate('/app/dashboard');
+      } else {
+        navigate('/app/map');
+      }
     } catch (err) {
-      setError('שם משתמש או סיסמה שגויים');
+      setError(err.message || 'שגיאה בהתחברות');
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs" className={styles.container}>
-      <Paper className={styles.paper} elevation={3}>
-        <Typography component="h1" variant="h5">
-          התחברות
+    <Container maxWidth="sm" className={styles.container}>
+      <Paper elevation={3} className={styles.paper}>
+        <Typography variant="h4" component="h1" gutterBottom align="center">
+          התחברות למערכת
         </Typography>
-        
+
         {error && (
-          <Typography color="error" className={styles.error}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
-          </Typography>
+          </Alert>
         )}
 
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="דואר אלקטרוני"
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={formData.email}
-                onChange={handleChange}
-                autoFocus
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="סיסמה"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </Grid>
-          </Grid>
+        <form onSubmit={handleSubmit}>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>סוג משתמש</InputLabel>
+            <Select
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              label="סוג משתמש"
+            >
+              <MenuItem value="volunteer">מתנדב</MenuItem>
+              <MenuItem value="admin">מנהל</MenuItem>
+            </Select>
+          </FormControl>
 
-          <Button
-            type="submit"
+          <TextField
             fullWidth
-            variant="contained"
-            color="primary"
-            className={styles.submit}
-          >
-            התחבר
-          </Button>
+            margin="normal"
+            label="אימייל"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            error={!!validationErrors.email}
+            helperText={validationErrors.email}
+            required
+          />
 
-          <Grid container justifyContent="center" className={styles.links}>
-            <Grid item>
-              <MuiLink component={Link} to="/register" variant="body2">
-                אין לך חשבון? הירשם כאן
-              </MuiLink>
-            </Grid>
-          </Grid>
+          <TextField
+            fullWidth
+            margin="normal"
+            label="סיסמה"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            error={!!validationErrors.password}
+            helperText={validationErrors.password}
+            required
+          />
+
+          <Box mt={3}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              size="large"
+            >
+              התחבר
+            </Button>
+          </Box>
         </form>
       </Paper>
     </Container>

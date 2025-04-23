@@ -21,6 +21,7 @@ import ElderlyForm from './components/Elderly/ElderlyForm';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import Profile from './components/Profile/Profile';
+import LandingPage from './components/Landing/LandingPage';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/Auth/PrivateRoute';
 
@@ -71,10 +72,11 @@ const App = () => {
         <BrowserRouter future={{ v7_relativeSplatPath: true }}>
           <AuthProvider>
             <Routes>
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/app" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                <Route index element={<Navigate to="/app/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="map" element={<MapView />} />
                 <Route path="visits" element={<VisitList />} />

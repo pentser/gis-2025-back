@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AppBar, Box, CssBaseline, Drawer, IconButton, Toolbar, Typography, Button } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
+import HomeIcon from '@mui/icons-material/Home';
 import Sidebar from './Sidebar';
 import styles from './Layout.module.css';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +21,11 @@ export default function Layout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
+  };
+
+  const handleHomeClick = () => {
+    navigate('/');
   };
 
   return (
@@ -40,6 +45,14 @@ export default function Layout() {
           <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
             מערכת ניטור קשישים
           </Typography>
+          <Button 
+            color="inherit" 
+            onClick={handleHomeClick}
+            startIcon={<HomeIcon />}
+            sx={{ mr: 2 }}
+          >
+            חזרה לדף הבית
+          </Button>
           {user && isDashboard && (
             <Button 
               color="inherit" 
