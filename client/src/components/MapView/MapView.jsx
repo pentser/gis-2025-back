@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
@@ -61,6 +61,34 @@ const MapUpdater = ({ center }) => {
   useEffect(() => {
     map.setView(center);
   }, [center, map]);
+  return null;
+};
+
+// קומפוננטת עדכון מעגל הרדיוס
+const RadiusCircleUpdater = ({ center, radius }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    // שימוש ברפרנס לשמירת המעגל בין רינדורים
+    const circleRef = { current: null };
+    
+    // יצירת מעגל חדש עם הרדיוס המעודכן
+    circleRef.current = L.circle(center, {
+      radius: parseInt(radius) * 1000,
+      color: '#3498db',
+      fillColor: '#3498db',
+      fillOpacity: 0.1,
+      weight: 1
+    }).addTo(map);
+    
+    // פונקציית ניקוי שתופעל כשהקומפוננטה מתפרקת או כשהתלויות משתנות
+    return () => {
+      if (circleRef.current) {
+        map.removeLayer(circleRef.current);
+      }
+    };
+  }, [map, center, radius]);
+  
   return null;
 };
 
@@ -606,7 +634,7 @@ const MapView = () => {
         const queryParams = new URLSearchParams({
           lat: userLocation[0],
           lng: userLocation[1],
-          radius: filters.radius
+          radius: parseInt(filters.radius) || 10
         });
         
         // הוספת פרמטרים נוספים רק אם הם לא ריקים
@@ -772,6 +800,9 @@ const MapView = () => {
                 </div>
               </Popup>
             </Marker>
+            
+            {/* מעגל רדיוס החיפוש */}
+            <RadiusCircleUpdater center={userLocation} radius={filters.radius} />
 
             {/* סמנים עבור זקנים */}
             {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly.map((elder) => (

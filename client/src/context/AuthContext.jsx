@@ -104,6 +104,7 @@ export const AuthProvider = ({ children }) => {
       
       if (!response.ok) {
         console.error('שגיאת הרשמה:', data);
+        setError(data.message || 'שגיאה בהרשמה');
         throw new Error(data.message || 'שגיאה בהרשמה');
       }
 
@@ -118,6 +119,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('שגיאה בהרשמה:', error);
+      setError(error.message);
       throw error;
     }
   };

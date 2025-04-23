@@ -21,7 +21,8 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    address: ''
+    address: '',
+    phone: ''
   });
   const [error, setError] = useState('');
 
@@ -46,7 +47,7 @@ const Register = () => {
       await register(formData);
       navigate('/');
     } catch (err) {
-      setError('שגיאה בהרשמה. אנא נסה שנית.');
+      setError(err.message || 'שגיאה בהרשמה. אנא נסה שנית.');
     }
   };
 
@@ -96,6 +97,18 @@ const Register = () => {
                 autoComplete="email"
                 value={formData.email}
                 onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                required
+                fullWidth
+                label="טלפון נייד"
+                name="phone"
+                placeholder="05XXXXXXXX"
+                value={formData.phone}
+                onChange={handleChange}
+                inputProps={{ maxLength: 10 }}
               />
             </Grid>
             <Grid item xs={12}>

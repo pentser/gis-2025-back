@@ -48,6 +48,25 @@ export const register = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ message: 'משתמש עם אימייל זה כבר קיים במערכת' });
     }
+    
+    // בדיקות שדות חובה
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: 'כל השדות המסומנים בכוכבית הם שדות חובה' });
+    }
+    
+    // בדיקת תקינות מספר טלפון למתנדב
+    if (role === 'volunteer') {
+      // וידוא שיש מספר טלפון
+      if (!phone) {
+        return res.status(400).json({ message: 'מספר טלפון הוא שדה חובה למתנדבים' });
+      }
+      
+      // וידוא שמספר הטלפון תקין
+      const phoneRegex = /^[0-9]{10}$/;
+      if (!phoneRegex.test(phone)) {
+        return res.status(400).json({ message: 'מספר הטלפון חייב להכיל 10 ספרות בדיוק' });
+      }
+    }
 
     // הצפנת הסיסמה
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -55,16 +74,38 @@ export const register = async (req, res) => {
     // המרת הכתובת לקואורדינטות אם ניתן
     let location = null;
     if (address) {
-      const coordinates = await geocodeAddress(address);
-      console.log('קואורדינטות שהתקבלו:', coordinates);
-      
-      if (coordinates && Array.isArray(coordinates) && coordinates.length === 2) {
+      try {
+        const coordinates = await geocodeAddress(address);
+        console.log('קואורדינטות שהתקבלו:', coordinates);
+        
+        if (coordinates && Array.isArray(coordinates) && coordinates.length === 2) {
+          location = {
+            type: 'Point',
+            coordinates: coordinates
+          };
+          console.log('מיקום שנוצר:', location);
+        } else {
+          // מיקום ברירת מחדל של ישראל אם לא התקבלו קואורדינטות תקינות
+          location = {
+            type: 'Point',
+            coordinates: [35.217018, 31.771959]
+          };
+          console.log('מיקום ברירת מחדל נוצר:', location);
+        }
+      } catch (geoError) {
+        console.error('שגיאה בהמרת כתובת למיקום:', geoError);
+        // מיקום ברירת מחדל של ישראל במקרה של שגיאה
         location = {
           type: 'Point',
-          coordinates: coordinates
+          coordinates: [35.217018, 31.771959]
         };
-        console.log('מיקום שנוצר:', location);
       }
+    } else {
+      // מיקום ברירת מחדל של ישראל אם אין כתובת
+      location = {
+        type: 'Point',
+        coordinates: [35.217018, 31.771959]
+      };
     }
 
     // יצירת נתוני משתמש חדש
@@ -74,14 +115,10 @@ export const register = async (req, res) => {
       firstName,
       lastName,
       role,
-      address,
-      isActive: true
+      address: address || '',
+      isActive: true,
+      location // תמיד יהיה מיקום, גם אם ברירת מחדל
     };
-    
-    // הוסף את המיקום רק אם הוא תקין
-    if (location) {
-      userData.location = location;
-    }
     
     let user;
     let token;
@@ -95,32 +132,55 @@ export const register = async (req, res) => {
         email,
         firstName, 
         lastName,
-        phone: phone || '', // שדה חובה במודל המתנדב
+        phone,
         address: {
-          street: address || '', // מבנה כתובת שונה במודל המתנדב
+          street: address || '',
           city: ''
         },
-        location: location,
+        location,
         role: 'מתנדב'
       };
       
-      // יצירת משתמש ומתנדב מקושרים
-      const { user: newUser, volunteer } = await createLinkedVolunteer(userData, volunteerData);
-      user = newUser;
-      
-      console.log('נוצר משתמש מתנדב:', user._id, 'מקושר למתנדב:', volunteer._id);
+      try {
+        // יצירת משתמש ומתנדב מקושרים
+        const result = await createLinkedVolunteer(userData, volunteerData);
+        user = result.user;
+        console.log('נוצר משתמש מתנדב:', user._id, 'מקושר למתנדב:', result.volunteer._id);
+      } catch (linkError) {
+        console.error('שגיאה ביצירת מתנדב מקושר:', linkError);
+        return res.status(500).json({ 
+          message: 'שגיאה בהרשמה', 
+          error: linkError.message || 'שגיאה ביצירת משתמש מתנדב מקושר'
+        });
+      }
     } else {
       // יצירת משתמש רגיל (לא מתנדב)
-      console.log('נתוני משתמש לשמירה:', userData);
-      user = await User.create(userData);
+      try {
+        console.log('נתוני משתמש לשמירה:', { ...userData, password: '********' }); // הסתרת הסיסמה בלוג
+        user = await User.create(userData);
+      } catch (userError) {
+        console.error('שגיאה ביצירת משתמש:', userError);
+        return res.status(500).json({ 
+          message: 'שגיאה בהרשמה', 
+          error: userError.message || 'שגיאה ביצירת משתמש חדש'
+        });
+      }
     }
 
     // יצירת טוקן
-    token = jwt.sign(
-      { userId: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    try {
+      token = jwt.sign(
+        { userId: user._id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+    } catch (tokenError) {
+      console.error('שגיאה ביצירת טוקן:', tokenError);
+      return res.status(500).json({ 
+        message: 'הרשמה הצליחה אך נכשלה יצירת טוקן התחברות',
+        error: tokenError.message 
+      });
+    }
 
     res.status(201).json({
       token,

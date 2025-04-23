@@ -1,5 +1,6 @@
 import User from '../models/user.model.js';
 import Volunteer from '../models/volunteer.model.js';
+import bcrypt from 'bcryptjs';
 
 /**
  * פונקציה ליצירת מתנדב חדש וקישורו למשתמש
@@ -12,13 +13,39 @@ export const createLinkedVolunteer = async (userData, volunteerData = {}) => {
     // יצירת משתמש חדש במערכת
     const user = await User.create(userData);
     
+    // בדיקה והכנה של מיקום תקין
+    let location = volunteerData.location;
+    
+    // אם יש מיקום, בדוק שהוא תקין
+    if (location && location.coordinates) {
+      // וידוא שהקואורדינטות הן מערך של שני מספרים תקינים
+      if (!Array.isArray(location.coordinates) || location.coordinates.length !== 2 ||
+          !Number.isFinite(location.coordinates[0]) || !Number.isFinite(location.coordinates[1]) ||
+          location.coordinates[0] < -180 || location.coordinates[0] > 180 ||
+          location.coordinates[1] < -90 || location.coordinates[1] > 90) {
+        // מיקום לא תקין - ניצור מיקום ברירת מחדל של ישראל
+        location = {
+          type: 'Point',
+          coordinates: [35.217018, 31.771959] // ברירת מחדל למרכז ישראל
+        };
+      }
+    } else if (!location || !location.coordinates) {
+      // אין מיקום - ניצור מיקום ברירת מחדל של ישראל
+      location = {
+        type: 'Point',
+        coordinates: [35.217018, 31.771959] // ברירת מחדל למרכז ישראל
+      };
+    }
+    
     // הוספת שדה user למתנדב
     const completeVolunteerData = {
       ...volunteerData,
       user: user._id,
       email: user.email, // הבטחה שהאימייל יהיה זהה
       firstName: volunteerData.firstName || user.firstName,
-      lastName: volunteerData.lastName || user.lastName
+      lastName: volunteerData.lastName || user.lastName,
+      location: location,
+      password: userData.password // הסיסמה המוצפנת מועברת כפי שהיא
     };
     
     // יצירת מתנדב חדש וקישורו למשתמש
