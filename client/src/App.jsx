@@ -3,8 +3,7 @@ import {
   BrowserRouter, 
   Routes, 
   Route, 
-  Navigate,
-  createRoutesFromElements
+  Navigate
 } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import rtlPlugin from 'stylis-plugin-rtl';
@@ -22,6 +21,7 @@ import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import Profile from './components/Profile/Profile';
 import LandingPage from './components/Landing/LandingPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/Auth/PrivateRoute';
 
@@ -69,27 +69,31 @@ const App = () => {
   return (
     <CacheProvider value={cacheRtl}>
       <ThemeProvider theme={theme}>
-        <BrowserRouter future={{ v7_relativeSplatPath: true }}>
-          <AuthProvider>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/app" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                <Route index element={<Navigate to="/app/dashboard" replace />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="map" element={<MapView />} />
-                <Route path="visits" element={<VisitList />} />
-                <Route path="visits/new" element={<VisitForm />} />
-                <Route path="visits/:id" element={<VisitForm />} />
-                <Route path="elderly" element={<ElderlyList />} />
-                <Route path="elderly/new" element={<ElderlyForm />} />
-                <Route path="elderly/:id" element={<ElderlyForm />} />
-                <Route path="profile" element={<Profile />} />
-              </Route>
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
+        <ErrorBoundary>
+          <BrowserRouter future={{ v7_startTransition: true }}>
+            <AuthProvider>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/app" element={<PrivateRoute><Layout /></PrivateRoute>}>
+                  <Route index element={<Navigate to="/app/dashboard" replace />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="map" element={<MapView />} />
+                  <Route path="visits" element={<VisitList />} />
+                  <Route path="visits/new" element={<VisitForm />} />
+                  <Route path="visits/:id" element={<VisitForm />} />
+                  <Route path="elderly" element={<ElderlyList />} />
+                  <Route path="elderly/new" element={<ElderlyForm />} />
+                  <Route path="elderly/:id" element={<ElderlyForm />} />
+                  <Route path="profile" element={<Profile />} />
+                </Route>
+                <Route path="/visits/new" element={<Navigate to="/app/visits/new" replace />} />
+                <Route path="/visits/:id" element={<Navigate to="/app/visits/:id" replace />} />
+              </Routes>
+            </AuthProvider>
+          </BrowserRouter>
+        </ErrorBoundary>
       </ThemeProvider>
     </CacheProvider>
   );

@@ -11,33 +11,30 @@ const visitSchema = new mongoose.Schema({
     ref: 'Volunteer',
     required: true
   },
-  lastVisit: {
+  date: {
     type: Date,
-    required: true,
-    default: Date.now
-  },
-  previousVisit: {
-    type: Date
-  },
-  visitSummary: {
-    type: String,
-    trim: true
+    required: true
   },
   duration: {
     type: Number,
-    min: 0
+    min: 0,
+    required: true
   },
   status: {
     type: String,
-    enum: ['מתוכנן', 'בוצע', 'בוטל'],
-    default: 'מתוכנן'
+    enum: ['scheduled', 'completed', 'cancelled'],
+    default: 'scheduled'
+  },
+  notes: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true
 });
 
-// אינדקס על תאריך הביקור האחרון
-visitSchema.index({ lastVisit: -1 });
+// אינדקס על תאריך הביקור
+visitSchema.index({ date: -1 });
 
 // אינדקס משולב על הקשיש והמתנדב
 visitSchema.index({ elder: 1, volunteer: 1 });

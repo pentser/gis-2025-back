@@ -18,7 +18,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { he } from 'date-fns/locale';
-import { fetchVisitById, createVisit, updateVisit, fetchElderly } from '../../services/api';
+import { fetchVisitById, createVisit, updateVisit, fetchElderly, fetchVolunteers } from '../../services/api';
 import styles from './VisitForm.module.css';
 
 const VisitForm = () => {
@@ -29,14 +29,16 @@ const VisitForm = () => {
   const elderId = queryParams.get('elderId');
 
   const [formData, setFormData] = useState({
-    elderlyId: elderId || '',
+    elder: elderId || '',
+    volunteer: '',
     date: new Date(),
-    duration: '',
+    duration: 30,
     notes: '',
-    status: 'מתוכנן'
+    status: 'scheduled'
   });
 
   const [elderly, setElderly] = useState([]);
+  const [volunteers, setVolunteers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -51,11 +53,16 @@ const VisitForm = () => {
         const elderlyData = await fetchElderly();
         setElderly(elderlyData);
 
+        // טעינת רשימת המתנדבים
+        const volunteersData = await fetchVolunteers();
+        setVolunteers(volunteersData);
+
         // אם יש ID, טען את פרטי הביקור
         if (id) {
           const visitData = await fetchVisitById(id);
           setFormData({
-            elderlyId: visitData.elderlyId,
+            elder: visitData.elder,
+            volunteer: visitData.volunteer,
             date: new Date(visitData.date),
             duration: visitData.duration,
             notes: visitData.notes,
@@ -63,6 +70,7 @@ const VisitForm = () => {
           });
         }
       } catch (err) {
+        console.error('שגיאה בטעינת נתונים:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -78,17 +86,26 @@ const VisitForm = () => {
       setLoading(true);
       setError(null);
 
+      const visitData = {
+        ...formData,
+        date: formData.date.toISOString(),
+        duration: parseInt(formData.duration)
+      };
+
+      console.log('שולח נתוני ביקור:', visitData);
+
       if (id) {
-        await updateVisit(id, formData);
+        await updateVisit(id, visitData);
       } else {
-        await createVisit(formData);
+        await createVisit(visitData);
       }
 
       setSuccess(true);
       setTimeout(() => {
-        navigate('/visits');
+        navigate('/app/visits');
       }, 1500);
     } catch (err) {
+      console.error('שגיאה בשמירת ביקור:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -136,10 +153,28 @@ const VisitForm = () => {
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <FormControl fullWidth>
+                <InputLabel>מתנדב</InputLabel>
+                <Select
+                  name="volunteer"
+                  value={formData.volunteer}
+                  onChange={handleChange}
+                  required
+                >
+                  {volunteers.map((volunteer) => (
+                    <MenuItem key={volunteer._id} value={volunteer._id}>
+                      {volunteer.firstName} {volunteer.lastName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControl fullWidth>
                 <InputLabel>קשיש</InputLabel>
                 <Select
-                  name="elderlyId"
-                  value={formData.elderlyId}
+                  name="elder"
+                  value={formData.elder}
                   onChange={handleChange}
                   required
                 >
@@ -164,7 +199,7 @@ const VisitForm = () => {
                     }));
                   }}
                   slots={{
-                    textField: (params) => <TextField {...params} fullWidth />
+                    textField: (params) => <TextField {...params} fullWidth required />
                   }}
                 />
               </LocalizationProvider>
@@ -179,6 +214,7 @@ const VisitForm = () => {
                 value={formData.duration}
                 onChange={handleChange}
                 required
+                inputProps={{ min: 1 }}
               />
             </Grid>
 
@@ -191,9 +227,9 @@ const VisitForm = () => {
                   onChange={handleChange}
                   required
                 >
-                  <MenuItem value="מתוכנן">מתוכנן</MenuItem>
-                  <MenuItem value="בוצע">בוצע</MenuItem>
-                  <MenuItem value="בוטל">בוטל</MenuItem>
+                  <MenuItem value="scheduled">מתוכנן</MenuItem>
+                  <MenuItem value="completed">בוצע</MenuItem>
+                  <MenuItem value="cancelled">בוטל</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -223,7 +259,7 @@ const VisitForm = () => {
                 <Button
                   type="button"
                   variant="outlined"
-                  onClick={() => navigate('/visits')}
+                  onClick={() => navigate('/app/visits')}
                   disabled={loading}
                 >
                   ביטול

@@ -3,20 +3,24 @@ import { Visit, Elderly } from '../models/index.js';
 // יצירת ביקור חדש
 export const createVisit = async (req, res) => {
   try {
+    const { elder, date, duration, status, notes } = req.body;
+    
+    if (!elder) {
+      return res.status(400).json({ message: 'נדרש לציין קשיש' });
+    }
+
     const visit = new Visit({
-      ...req.body,
-      volunteer: req.volunteer._id
+      elder,
+      volunteer: req.user._id,
+      date,
+      duration,
+      status,
+      notes
     });
     
     await visit.save();
-
-    // עדכון תאריך ביקור אחרון בפרטי הקשיש
-    await Elderly.findByIdAndUpdate(req.body.elder, {
-      lastVisit: visit.lastVisit,
-      visitSummary: visit.visitSummary
-    });
-
     await visit.populate('elder volunteer');
+    
     res.status(201).json(visit);
   } catch (error) {
     res.status(400).json({
@@ -30,17 +34,17 @@ export const createVisit = async (req, res) => {
 export const getMyVisits = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const query = { volunteer: req.volunteer._id };
+    const query = { volunteer: req.user._id };
 
     if (startDate || endDate) {
-      query.lastVisit = {};
-      if (startDate) query.lastVisit.$gte = new Date(startDate);
-      if (endDate) query.lastVisit.$lte = new Date(endDate);
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
     }
 
     const visits = await Visit.find(query)
       .populate('elder')
-      .sort({ lastVisit: -1 });
+      .sort({ date: -1 });
 
     res.json(visits);
   } catch (error) {
@@ -55,7 +59,7 @@ export const getElderVisits = async (req, res) => {
   try {
     const visits = await Visit.find({ elder: req.params.elderId })
       .populate('volunteer', '-password')
-      .sort({ lastVisit: -1 });
+      .sort({ date: -1 });
 
     res.json(visits);
   } catch (error) {
@@ -74,7 +78,7 @@ export const getVisitStats = async (req, res) => {
           _id: null,
           totalVisits: { $sum: 1 },
           averageVisitLength: { $avg: { 
-            $subtract: ['$lastVisit', '$previousVisit'] 
+            $subtract: ['$date', '$previousDate'] 
           }},
           uniqueElders: { $addToSet: '$elder' }
         }
@@ -104,38 +108,27 @@ export const getVisitStats = async (req, res) => {
 // עדכון פרטי ביקור
 export const updateVisit = async (req, res) => {
   try {
-    const updates = Object.keys(req.body);
-    const allowedUpdates = ['lastVisit', 'previousVisit', 'visitSummary'];
+    const { date, duration, status, notes } = req.body;
+    const updates = { date, duration, status, notes };
     
-    const isValidOperation = updates.every(update => 
-      allowedUpdates.includes(update)
-    );
-
-    if (!isValidOperation) {
-      return res.status(400).json({ message: 'עדכונים לא חוקיים' });
-    }
-
     const visit = await Visit.findOne({
       _id: req.params.id,
-      volunteer: req.volunteer._id
+      volunteer: req.user._id
     });
 
     if (!visit) {
       return res.status(404).json({ message: 'ביקור לא נמצא' });
     }
 
-    updates.forEach(update => visit[update] = req.body[update]);
+    Object.keys(updates).forEach(key => {
+      if (updates[key] !== undefined) {
+        visit[key] = updates[key];
+      }
+    });
+
     await visit.save();
-
-    // עדכון פרטי הקשיש אם נדרש
-    if (updates.includes('lastVisit') || updates.includes('visitSummary')) {
-      await Elderly.findByIdAndUpdate(visit.elder, {
-        lastVisit: visit.lastVisit,
-        visitSummary: visit.visitSummary
-      });
-    }
-
     await visit.populate('elder volunteer');
+    
     res.json(visit);
   } catch (error) {
     res.status(400).json({
@@ -150,7 +143,7 @@ export const deleteVisit = async (req, res) => {
   try {
     const visit = await Visit.findOneAndDelete({
       _id: req.params.id,
-      volunteer: req.volunteer._id
+      volunteer: req.user._id
     });
 
     if (!visit) {

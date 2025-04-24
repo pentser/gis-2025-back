@@ -139,26 +139,26 @@ router.get('/:id', auth, async (req, res) => {
 // יצירת ביקור חדש
 router.post('/', auth, async (req, res) => {
   try {
-    const { elderlyId, date, duration, notes, status } = req.body;
+    const { elder, date, duration, notes, status } = req.body;
     
-    if (!elderlyId) {
+    if (!elder) {
       return res.status(400).json({ message: 'נדרש לציין קשיש' });
     }
     
     const visit = new Visit({
-      elder: elderlyId,
+      elder,
       volunteer: req.user._id,
-      lastVisit: date || new Date(),
-      visitSummary: notes,
+      date: date || new Date(),
       duration,
+      notes,
       status
     });
     
     await visit.save();
     
     // עדכון תאריך ביקור אחרון בפרטי הקשיש
-    await Elderly.findByIdAndUpdate(elderlyId, {
-      lastVisit: visit.lastVisit,
+    await Elderly.findByIdAndUpdate(elder, {
+      lastVisit: visit.date,
       visitSummary: notes
     });
     

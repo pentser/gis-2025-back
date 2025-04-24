@@ -1,11 +1,16 @@
 .container {
   padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
+  min-height: 100vh;
 }
 
 .paper {
   padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.alert {
+  margin-bottom: 1rem;
 }
 
 .loading {
@@ -15,15 +20,15 @@
   min-height: 200px;
 }
 
-.alert {
-  margin-bottom: 2rem;
-}
-
 .actions {
   display: flex;
-  justify-content: flex-end;
   gap: 1rem;
-  margin-top: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.form {
+  margin-top: 2rem;
 }
 
 @media (max-width: 600px) {
@@ -37,7 +42,6 @@
 
   .actions {
     flex-direction: column;
-    gap: 0.5rem;
   }
 
   .actions button {

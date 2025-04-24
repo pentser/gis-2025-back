@@ -31,11 +31,53 @@ export const fetchVisits = () => fetchWithAuth('/api/visits');
 
 export const fetchVisitById = (id) => fetchWithAuth(`/api/visits/${id}`);
 
-export const createVisit = (visitData) => 
-  fetchWithAuth('/api/visits', {
-    method: 'POST',
-    body: JSON.stringify(visitData),
-  });
+export const createVisit = async (visitData) => {
+  try {
+    console.log('שולח בקשה ליצירת ביקור:', visitData);
+    
+    if (!visitData.elder) {
+      console.error('חסר ID קשיש בנתונים:', visitData);
+      throw new Error('נדרש לציין קשיש');
+    }
+
+    if (!visitData.volunteer) {
+      console.error('חסר ID מתנדב בנתונים:', visitData);
+      throw new Error('נדרש לציין מתנדב');
+    }
+
+    if (!visitData.date) {
+      console.error('חסר תאריך בנתונים:', visitData);
+      throw new Error('נדרש לציין תאריך');
+    }
+
+    if (!visitData.duration) {
+      console.error('חסר משך בנתונים:', visitData);
+      throw new Error('נדרש לציין משך ביקור');
+    }
+
+    const response = await fetch(`${API_URL}/api/visits`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(visitData)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('שגיאת שרת:', data);
+      throw new Error(data.message || 'שגיאה ביצירת ביקור');
+    }
+
+    console.log('ביקור נוצר בהצלחה:', data);
+    return data;
+  } catch (error) {
+    console.error('שגיאה ביצירת ביקור:', error);
+    throw error;
+  }
+};
 
 export const updateVisit = async (visitId, visitData) => {
   try {
@@ -97,4 +139,6 @@ export const fetchMapData = (lat, lng) => {
 
 export const fetchVisitStats = () => fetchWithAuth('/api/visits/stats');
 
-export const fetchUrgentVisits = () => fetchWithAuth('/api/visits/urgent'); 
+export const fetchUrgentVisits = () => fetchWithAuth('/api/visits/urgent');
+
+export const fetchVolunteers = () => fetchWithAuth('/api/volunteers'); 
