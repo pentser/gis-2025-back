@@ -37,10 +37,10 @@ export const createVisit = (visitData) =>
     body: JSON.stringify(visitData),
   });
 
-export const updateVisit = async (elderId, visitData) => {
+export const updateVisit = async (visitId, visitData) => {
   try {
-    const response = await fetch(`${API_URL}/visits/${elderId}`, {
-      method: 'POST',
+    const response = await fetch(`${API_URL}/api/visits/${visitId}`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { fetchMapData, updateVisit } from '../../services/api';
+import { fetchMapData, updateVisit, createVisit } from '../../services/api';
 import styles from './MapView.module.css';
 import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
@@ -54,9 +54,10 @@ const MapView = () => {
     elderId: null,
     elderName: '',
     visitData: {
-      status: 'completed',
+      status: 'scheduled',
       notes: '',
-      duration: 30
+      duration: 30,
+      date: new Date().toISOString().split('T')[0]
     }
   });
 
@@ -94,18 +95,25 @@ const MapView = () => {
       elderId,
       elderName,
       visitData: {
-        status: 'completed',
+        status: 'scheduled',
         notes: '',
-        duration: 30
+        duration: 30,
+        date: new Date().toISOString().split('T')[0]
       }
     });
   };
 
   const handleVisitSubmit = async () => {
     try {
-      await updateVisit(visitDialog.elderId, visitDialog.visitData);
+      const visitData = {
+        ...visitDialog.visitData,
+        elderId: visitDialog.elderId,
+        volunteerId: user._id
+      };
+      
+      await createVisit(visitData);
       setVisitDialog(prev => ({ ...prev, open: false }));
-      loadMapData(center[0], center[1]); // רענון הנתונים
+      loadMapData(center[0], center[1]);
     } catch (err) {
       setError(err.message);
     }
@@ -183,7 +191,7 @@ const MapView = () => {
                         onClick={() => handleNewVisit(elder._id, `${elder.firstName} ${elder.lastName}`)}
                         sx={{ mt: 1 }}
                       >
-                        עדכן ביקור
+                        תאם ביקור חדש
                       </Button>
                     )}
                   </div>
@@ -221,21 +229,20 @@ const MapView = () => {
 
       {/* דיאלוג עדכון ביקור */}
       <Dialog open={visitDialog.open} onClose={() => setVisitDialog(prev => ({ ...prev, open: false }))}>
-        <DialogTitle>עדכון ביקור - {visitDialog.elderName}</DialogTitle>
+        <DialogTitle>תיאום ביקור חדש - {visitDialog.elderName}</DialogTitle>
         <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>סטטוס הביקור</InputLabel>
-            <Select
-              name="status"
-              value={visitDialog.visitData.status}
-              onChange={handleVisitChange}
-              label="סטטוס הביקור"
-            >
-              <MenuItem value="completed">הביקור הושלם</MenuItem>
-              <MenuItem value="cancelled">הביקור בוטל</MenuItem>
-              <MenuItem value="rescheduled">הביקור נדחה</MenuItem>
-            </Select>
-          </FormControl>
+          <TextField
+            fullWidth
+            margin="normal"
+            label="תאריך הביקור"
+            name="date"
+            type="date"
+            value={visitDialog.visitData.date}
+            onChange={handleVisitChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
 
           <TextField
             fullWidth
