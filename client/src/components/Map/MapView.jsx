@@ -131,6 +131,37 @@ const sortElderlyByScore = (elderly, userLocation) => {
   }).sort((a, b) => b.score - a.score); // מיון בסדר יורד
 };
 
+// פונקציה לקביעת צבע לפי דחיפות
+const getUrgencyColor = (elder) => {
+  const urgencyScore = calculateUrgencyScore(elder);
+  if (urgencyScore >= 80) return '#e74c3c'; // אדום - דחיפות גבוהה
+  if (urgencyScore >= 60) return '#f39c12'; // כתום - דחיפות בינונית
+  return '#2ecc71'; // ירוק - דחיפות נמוכה
+};
+
+// יצירת אייקון דינמי לפי דחיפות
+const createElderlyIcon = (elder) => {
+  const color = getUrgencyColor(elder);
+  return new L.DivIcon({
+    className: 'elderly-marker',
+    html: `<div style="
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: ${color}; 
+      color: white;
+      width: 16px; 
+      height: 16px; 
+      border-radius: 50%; 
+      border: 2px solid white;
+      box-shadow: 0 0 4px rgba(0,0,0,0.4);
+    "></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10]
+  });
+};
+
 const MapView = () => {
   const [mapData, setMapData] = useState({ elderly: [], volunteers: [] });
   const [error, setError] = useState(null);
@@ -516,13 +547,14 @@ const MapView = () => {
                   elder.location.coordinates[1],
                   elder.location.coordinates[0]
                 ]}
-                icon={elderlyIcon}
+                icon={createElderlyIcon(elder)}
               >
                 <Popup>
                   <div>
                     <h3>{elder.firstName} {elder.lastName}</h3>
                     <p>כתובת: {elder.address}</p>
                     <p>סטטוס: {elder.status}</p>
+                    <p>דחיפות: {calculateUrgencyScore(elder)}%</p>
                     {user?.role === 'volunteer' && userLocation && (
                       <p>
                         מרחק: {calculateDistance(
