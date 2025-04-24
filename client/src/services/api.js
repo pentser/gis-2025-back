@@ -10,7 +10,7 @@ const getHeaders = () => {
 };
 
 // פונקציית עזר לביצוע בקשות
-const fetchWithAuth = async (endpoint, options = {}) => {
+export const fetchWithAuth = async (endpoint, options = {}) => {
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers: {

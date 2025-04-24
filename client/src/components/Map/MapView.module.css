@@ -108,6 +108,65 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.visitsTable {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.visitsTable h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.visitsTable table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.visitsTable th {
+  background-color: #f5f5f5;
+  padding: 12px;
+  text-align: right;
+  font-weight: bold;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.visitsTable td {
+  padding: 12px;
+  text-align: right;
+  border-bottom: 1px solid #ddd;
+}
+
+.visitsTable tr:hover {
+  background-color: #f9f9f9;
+}
+
+.visitsTable tr:last-child td {
+  border-bottom: none;
+}
+
+/* עיצוב סטטוס הביקור */
+.visitsTable td:nth-child(6) {
+  font-weight: 500;
+}
+
+.visitsTable td:nth-child(6):contains('מתוכנן') {
+  color: #2196f3;
+}
+
+.visitsTable td:nth-child(6):contains('בוצע') {
+  color: #4caf50;
+}
+
+.visitsTable td:nth-child(6):contains('בוטל') {
+  color: #f44336;
+}
+
 @media (max-width: 600px) {
   .container {
     padding: 16px;

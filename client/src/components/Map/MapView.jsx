@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Box } from '@mui/material';
+import { Container, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { fetchMapData, updateVisit, createVisit } from '../../services/api';
+import { fetchMapData, updateVisit, createVisit, fetchWithAuth } from '../../services/api';
 import styles from './MapView.module.css';
 import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
@@ -93,6 +93,7 @@ const MapView = () => {
       date: new Date().toISOString().split('T')[0]
     }
   });
+  const [visits, setVisits] = useState([]);
 
   useEffect(() => {
     // קבלת מיקום המשתמש
@@ -112,13 +113,28 @@ const MapView = () => {
     } else {
       loadMapData(center[0], center[1]);
     }
-  }, []);
+
+    // טעינת ביקורים אם המשתמש הוא מתנדב
+    if (user?.role === 'volunteer') {
+      loadVisits();
+    }
+  }, [user]);
 
   const loadMapData = async (lat, lng) => {
     try {
       const data = await fetchMapData(lat, lng);
       setMapData(data);
     } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const loadVisits = async () => {
+    try {
+      const data = await fetchWithAuth('/api/visits/my-visits');
+      setVisits(data);
+    } catch (err) {
+      console.error('שגיאה בטעינת ביקורים:', err);
       setError(err.message);
     }
   };
@@ -171,8 +187,17 @@ const MapView = () => {
       const response = await createVisit(visitData);
       console.log('תגובת השרת:', response);
       
+      // סגירת הדיאלוג
       setVisitDialog(prev => ({ ...prev, open: false }));
-      loadMapData(center[0], center[1]);
+      
+      // עדכון הנתונים במפה
+      await loadMapData(center[0], center[1]);
+      
+      // עדכון טבלת הביקורים
+      await loadVisits();
+      
+      // הצגת הודעת הצלחה
+      alert('הביקור נוצר בהצלחה!');
     } catch (err) {
       console.error('שגיאה ביצירת ביקור:', err);
       setError(err.message || 'שגיאה ביצירת ביקור');
@@ -346,6 +371,63 @@ const MapView = () => {
           </MapContainer>
         </div>
       </Paper>
+
+      {/* טבלת ביקורים למתנדב */}
+      {user?.role === 'volunteer' && (
+        <Paper className={styles.visitsTable} sx={{ mt: 2, p: 2 }}>
+          <Typography variant="h5" component="h2" gutterBottom>
+            ביקורים שלי
+          </Typography>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>תאריך</TableCell>
+                  <TableCell>שעה</TableCell>
+                  <TableCell>קשיש</TableCell>
+                  <TableCell>כתובת</TableCell>
+                  <TableCell>משך (דקות)</TableCell>
+                  <TableCell>סטטוס</TableCell>
+                  <TableCell>הערות</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {Array.isArray(visits) && visits.length > 0 ? (
+                  visits.map((visit) => (
+                    <TableRow key={visit._id}>
+                      <TableCell>
+                        {new Date(visit.date).toLocaleDateString('he-IL')}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(visit.date).toLocaleTimeString('he-IL')}
+                      </TableCell>
+                      <TableCell>
+                        {visit.elder ? `${visit.elder.firstName} ${visit.elder.lastName}` : 'לא ידוע'}
+                      </TableCell>
+                      <TableCell>
+                        {visit.elder?.address || 'לא ידוע'}
+                      </TableCell>
+                      <TableCell>{visit.duration}</TableCell>
+                      <TableCell>
+                        {visit.status === 'scheduled' ? 'מתוכנן' :
+                         visit.status === 'completed' ? 'בוצע' :
+                         visit.status === 'cancelled' ? 'בוטל' : visit.status}
+                      </TableCell>
+                      <TableCell>{visit.notes}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      אין ביקורים להצגה
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
       {/* דיאלוג עדכון ביקור */}
       <Dialog open={visitDialog.open} onClose={() => setVisitDialog(prev => ({ ...prev, open: false }))}>
