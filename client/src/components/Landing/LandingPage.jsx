@@ -1,128 +1,91 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Button, 
-  Grid, 
-  Card, 
-  CardContent,
-  CardActions,
-  useTheme,
-  Divider
-} from '@mui/material';
+import styles from './LandingPage.module.css';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LoginIcon from '@mui/icons-material/Login';
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
+
+  useEffect(() => {
+    document.title = 'לב לקשיש ❤️';
+  }, []);
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
-        py: 8
-      }}
-    >
-      <Container maxWidth="lg">
-        <Grid container spacing={4}>
-          <Grid item xs={12} textAlign="center" mb={4}>
-            <Typography variant="h2" component="h1" color="white" gutterBottom>
-              מערכת ניהול מתנדבים
-            </Typography>
-            <Typography variant="h5" color="white" paragraph>
-              חיבור בין מתנדבים לקשישים בקהילה
-            </Typography>
-          </Grid>
+    <div className={styles.container}>
+      <h1>לב לקשיש ❤️</h1>
+      <div className={styles.undermaintytle}>
+        <div className={styles.content}>
+          <h4 className={styles.sectionTitle}>מגפת הבדידות בקרב קשישים</h4>
+          <p className={styles.paragraph}>
+            בישראל מעל 1.1 מיליון מבוגרים בני 65 ומעלה; כ־30% מהם בודדים, עריריים וללא קרובי משפחה.
+            מאות אלפי קשישים סובלים מבדידות קשה, ומאות מהם נפטרים בביתם מבלי שאיש ידע על כך בזמן אמת 
+            
+            עמותת לב לקשיש הוקמה בשנת 2021 במטרה לתמוך בקשישים בודדים
+            ולחבר בין מתנדבים חמים לקשישים עריריים, במטרה לתת להם תחושת משמעות ואכפתיות.
+          </p>
+        </div>
 
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Box display="flex" justifyContent="center" mb={2}>
-                  <VolunteerActivismIcon sx={{ fontSize: 60, color: theme.palette.primary.main }} />
-                </Box>
-                <Typography variant="h4" component="h2" gutterBottom textAlign="center">
-                  מתנדב חדש?
-                </Typography>
-                <Typography variant="body1" paragraph textAlign="center">
-                  הצטרפו למערכת כמתנדבים ותוכלו לראות את הקשישים באזור שלכם, לתאם ביקורים ולעקוב אחר הפעילות שלכם.
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                <Button 
-                  variant="contained" 
-                  size="large"
-                  onClick={() => navigate('/register')}
-                >
-                  הרשמה כמתנדב
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
+        <div className={styles.optionsContainer}>
+          <div className={styles.optionCard}>
+            <div className={styles.iconContainer}>
+              <VolunteerActivismIcon className={styles.icon} />
+            </div>
+            <h4>מתנדב חדש?</h4>
+            <p>הצטרפו למערכת כמתנדבים ותוכלו לראות את הקשישים באזור שלכם, לתאם ביקורים ולעקוב אחר הפעילות שלכם.</p>
+            <button 
+              onClick={() => navigate('/register')} 
+              className={styles.actionButton}
+            >
+              הרשמה כמתנדב
+            </button>
+          </div>
 
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Box display="flex" justifyContent="center" mb={2}>
-                  <AdminPanelSettingsIcon sx={{ fontSize: 60, color: theme.palette.secondary.main }} />
-                </Box>
-                <Typography variant="h4" component="h2" gutterBottom textAlign="center">
-                  מנהל מערכת?
-                </Typography>
-                <Typography variant="body1" paragraph textAlign="center">
-                  התחברו למערכת כמנהלים כדי לנהל את המתנדבים והקשישים, לעקוב אחר הביקורים ולנהל את המערכת.
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                <Button 
-                  variant="contained" 
-                  color="secondary"
-                  size="large"
-                  onClick={() => navigate('/login?role=admin')}
-                >
-                  התחברות כמנהל
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
+          <div className={styles.optionCard}>
+            <div className={styles.iconContainer}>
+              <AdminPanelSettingsIcon className={styles.icon} />
+            </div>
+            <h4>מנהל מערכת?</h4>
+            <p>התחברו למערכת כמנהלים כדי לנהל את המתנדבים והקשישים, לעקוב אחר הביקורים ולנהל את המערכת.</p>
+            <button 
+              onClick={() => navigate('/login?role=admin')} 
+              className={styles.actionButton}
+            >
+              התחברות כמנהל
+            </button>
+          </div>
 
-          <Grid item xs={12}>
-            <Divider sx={{ my: 4, backgroundColor: 'white' }} />
-          </Grid>
+          <div className={styles.optionCard}>
+            <div className={styles.iconContainer}>
+              <LoginIcon className={styles.icon} />
+            </div>
+            <h4>מתנדב רשום?</h4>
+            <p>התחברו למערכת כדי לצפות במפת הקשישים באזור שלכם, לתאם ביקורים ולעדכן את המערכת.</p>
+            <button 
+              onClick={() => navigate('/login?role=volunteer')} 
+              className={styles.actionButton}
+            >
+              התחברות כמתנדב
+            </button>
+          </div>
+        </div>
 
-          <Grid item xs={12}>
-            <Card sx={{ maxWidth: 600, mx: 'auto' }}>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="center" mb={2}>
-                  <LoginIcon sx={{ fontSize: 40, color: theme.palette.primary.main, mr: 2 }} />
-                  <Typography variant="h4" component="h2" textAlign="center">
-                    מתנדב רשום?
-                  </Typography>
-                </Box>
-                <Typography variant="body1" paragraph textAlign="center">
-                  התחברו למערכת כדי לצפות במפת הקשישים באזור שלכם, לתאם ביקורים ולעדכן את המערכת.
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: 'center', pb: 3 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  startIcon={<LoginIcon />}
-                  onClick={() => navigate('/login?role=volunteer')}
-                >
-                  התחברות כמתנדב
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        </Grid>
-      </Container>
-    </Box>
+        <div className={styles.features}>
+          <h4>בואו להתנדב עם הלב!❤️</h4>
+          <div className={styles.contactInfo}>
+            <h4>ליצירת קשר:</h4>
+            <p>עמותת לב לקשיש</p>
+            <p>רח׳ הדולב 2, רמת גן</p>
+            <p>טלפון: 03-7538971</p>
+            <p>מייל: valenteer@levlkashis.co.il</p>
+          </div>
+          <button onClick={() => navigate('/contact')} className={styles.contactButton}>
+            צרו קשר
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

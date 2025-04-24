@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Grid,
-  Link as MuiLink
-} from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
 import styles from './Auth.module.css';
 
@@ -52,122 +43,112 @@ const Register = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs" className={styles.container}>
-      <Paper className={styles.paper} elevation={3}>
-        <Typography component="h1" variant="h5">
-          הרשמה
-        </Typography>
+    <div className={styles.authContainer}>
+      <form className={styles.authForm} onSubmit={handleSubmit}>
+        <h2 className={styles.regTitles}>הרשמה</h2>
         
         {error && (
-          <Typography color="error" className={styles.error}>
+          <div className={styles.error}>
             {error}
-          </Typography>
+          </div>
         )}
 
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                required
-                fullWidth
-                label="שם פרטי"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                autoFocus
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                required
-                fullWidth
-                label="שם משפחה"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="דואר אלקטרוני"
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="טלפון נייד"
-                name="phone"
-                placeholder="05XXXXXXXX"
-                value={formData.phone}
-                onChange={handleChange}
-                inputProps={{ maxLength: 10 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="כתובת מלאה"
-                name="address"
-                placeholder="רחוב, מספר, עיר"
-                value={formData.address}
-                onChange={handleChange}
-                helperText="הכתובת תשמש להצגת המפה בהתאמה אישית"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="סיסמה"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="אימות סיסמה"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
-            </Grid>
-          </Grid>
+        <div className={styles.formGroup}>
+          <label htmlFor="firstName">שם פרטי</label>
+          <input
+            id="firstName"
+            type="text"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            required
+          />
+        </div>
 
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            color="primary"
-            className={styles.submit}
-          >
-            הרשמה
-          </Button>
+        <div className={styles.formGroup}>
+          <label htmlFor="lastName">שם משפחה</label>
+          <input
+            id="lastName"
+            type="text"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            required
+          />
+        </div>
 
-          <Grid container justifyContent="center" className={styles.links}>
-            <Grid item>
-              <MuiLink component={Link} to="/login" variant="body2">
-                כבר יש לך חשבון? התחבר כאן
-              </MuiLink>
-            </Grid>
-          </Grid>
-        </form>
-      </Paper>
-    </Container>
+        <div className={styles.formGroup}>
+          <label htmlFor="email">דואר אלקטרוני</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="phone">טלפון נייד</label>
+          <input
+            id="phone"
+            type="tel"
+            name="phone"
+            placeholder="05XXXXXXXX"
+            value={formData.phone}
+            onChange={handleChange}
+            maxLength={10}
+            required
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="address">כתובת מלאה</label>
+          <input
+            id="address"
+            type="text"
+            name="address"
+            placeholder="רחוב, מספר, עיר"
+            value={formData.address}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="password">סיסמה</label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="confirmPassword">אימות סיסמה</label>
+          <input
+            id="confirmPassword"
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <button type="submit" className={styles.submitButton}>
+          הרשמה
+        </button>
+
+        <div className={styles.links}>
+          <Link to="/login">כבר יש לך חשבון? התחבר כאן</Link>
+        </div>
+      </form>
+    </div>
   );
 };
 

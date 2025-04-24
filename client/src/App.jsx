@@ -21,6 +21,7 @@ import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import Profile from './components/Profile/Profile';
 import LandingPage from './components/Landing/LandingPage';
+import ContactForm from './components/Contact/ContactForm';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import PrivateRoute from './components/Auth/PrivateRoute';
@@ -83,6 +84,7 @@ const App = () => {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/contact" element={<ContactForm />} />
                 <Route path="/app" element={<PrivateRoute><Layout /></PrivateRoute>}>
                   <Route index element={<DefaultRoute />} />
                   <Route path="dashboard" element={<Dashboard />} />

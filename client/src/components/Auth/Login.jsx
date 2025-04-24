@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Alert
-} from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
 import styles from './Login.module.css';
 
@@ -76,59 +67,53 @@ const Login = () => {
   };
 
   return (
-    <Container maxWidth="sm" className={styles.container}>
-      <Paper elevation={3} className={styles.paper}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
+    <div className={styles.authContainer}>
+      <form className={styles.authForm} onSubmit={handleSubmit}>
+        <h2 className={styles.regTitles}>
           {isAdmin ? 'התחברות מנהל מערכת' : 'התחברות מתנדב'}
-        </Typography>
+        </h2>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <div className={styles.error}>
             {error}
-          </Alert>
+          </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            margin="normal"
-            label="אימייל"
-            name="email"
+        <div className={styles.formGroup}>
+          <label htmlFor="email">אימייל</label>
+          <input
+            id="email"
             type="email"
+            name="email"
             value={formData.email}
             onChange={handleChange}
-            error={!!validationErrors.email}
-            helperText={validationErrors.email}
             required
           />
+          {validationErrors.email && (
+            <div className={styles.error}>{validationErrors.email}</div>
+          )}
+        </div>
 
-          <TextField
-            fullWidth
-            margin="normal"
-            label="סיסמה"
-            name="password"
+        <div className={styles.formGroup}>
+          <label htmlFor="password">סיסמה</label>
+          <input
+            id="password"
             type="password"
+            name="password"
             value={formData.password}
             onChange={handleChange}
-            error={!!validationErrors.password}
-            helperText={validationErrors.password}
             required
           />
+          {validationErrors.password && (
+            <div className={styles.error}>{validationErrors.password}</div>
+          )}
+        </div>
 
-          <Box mt={3}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              size="large"
-            >
-              התחבר
-            </Button>
-          </Box>
-        </form>
-      </Paper>
-    </Container>
+        <button type="submit" className={styles.submitButton}>
+          התחבר
+        </button>
+      </form>
+    </div>
   );
 };
 
