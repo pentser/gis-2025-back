@@ -394,9 +394,13 @@ export const login = async (req, res) => {
         status: volunteerData.status || 'available',
         lastLogin: volunteerData.lastLogin
       };
+      console.log('שולח נתוני מתנדב בתגובה:', userResponse.volunteer);
     }
 
-    console.log('שולח תגובה:', { token });
+    console.log('מבנה התגובה המלא:', {
+      token,
+      user: userResponse
+    });
 
     return res.status(200).json({
       token,
@@ -431,7 +435,24 @@ export const getMe = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'משתמש לא נמצא' });
     }
-    res.json({
+
+    // אם המשתמש הוא מתנדב, נביא גם מידע מהמודל של המתנדב
+    let volunteerData = null;
+    if (user.role === 'volunteer') {
+      try {
+        const volunteer = await findVolunteerByUserId(user._id);
+        if (volunteer) {
+          console.log('נמצא מתנדב מקושר:', volunteer._id);
+          volunteerData = volunteer;
+        } else {
+          console.log('לא נמצא מתנדב מקושר למשתמש:', user._id);
+        }
+      } catch (volunteerErr) {
+        console.error('שגיאה בקבלת מידע המתנדב:', volunteerErr);
+      }
+    }
+
+    const userResponse = {
       id: user._id,
       email: user.email,
       firstName: user.firstName,
@@ -439,7 +460,19 @@ export const getMe = async (req, res) => {
       role: user.role,
       address: user.address,
       location: user.location
-    });
+    };
+
+    // הוספת נתוני המתנדב בתגובה אם קיימים
+    if (volunteerData) {
+      userResponse.volunteer = {
+        id: volunteerData._id,
+        status: volunteerData.status || 'available',
+        lastLogin: volunteerData.lastLogin
+      };
+      console.log('שולח נתוני מתנדב בתגובה:', userResponse.volunteer);
+    }
+
+    res.json(userResponse);
   } catch (error) {
     res.status(500).json({ message: 'שגיאת שרת', error: error.message });
   }

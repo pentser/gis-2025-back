@@ -7,10 +7,6 @@ import {
   TextField,
   Button,
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +16,6 @@ const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'volunteer'
   });
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
@@ -29,13 +24,8 @@ const Login = () => {
   const location = useLocation();
 
   // בדיקה אם הגענו מדף הנחיתה עם פרמטר role
-  React.useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const role = params.get('role');
-    if (role) {
-      setFormData(prev => ({ ...prev, role }));
-    }
-  }, [location]);
+  const role = new URLSearchParams(location.search).get('role');
+  const isAdmin = role === 'admin';
 
   const validateForm = () => {
     const errors = {};
@@ -74,8 +64,8 @@ const Login = () => {
     }
 
     try {
-      await login(formData);
-      if (formData.role === 'admin') {
+      await login({ ...formData, role });
+      if (role === 'admin') {
         navigate('/app/dashboard');
       } else {
         navigate('/app/map');
@@ -89,7 +79,7 @@ const Login = () => {
     <Container maxWidth="sm" className={styles.container}>
       <Paper elevation={3} className={styles.paper}>
         <Typography variant="h4" component="h1" gutterBottom align="center">
-          התחברות למערכת
+          {isAdmin ? 'התחברות מנהל מערכת' : 'התחברות מתנדב'}
         </Typography>
 
         {error && (
@@ -99,19 +89,6 @@ const Login = () => {
         )}
 
         <form onSubmit={handleSubmit}>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>סוג משתמש</InputLabel>
-            <Select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              label="סוג משתמש"
-            >
-              <MenuItem value="volunteer">מתנדב</MenuItem>
-              <MenuItem value="admin">מנהל</MenuItem>
-            </Select>
-          </FormControl>
-
           <TextField
             fullWidth
             margin="normal"

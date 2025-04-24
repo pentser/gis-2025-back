@@ -12,24 +12,42 @@ import { useNavigate } from 'react-router-dom';
 delete L.Icon.Default.prototype._getIconUrl;
 
 // הגדרת אייקונים שונים למתנדבים וזקנים
-const elderlyIcon = new L.Icon({
-  iconUrl: '/elderly-marker.png',
-  iconRetinaUrl: '/elderly-marker-2x.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowUrl: '/marker-shadow.png',
-  shadowSize: [41, 41]
+const elderlyIcon = new L.DivIcon({
+  className: 'elderly-marker',
+  html: `<div style="
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e74c3c; 
+    color: white;
+    width: 16px; 
+    height: 16px; 
+    border-radius: 50%; 
+    border: 2px solid white;
+    box-shadow: 0 0 4px rgba(0,0,0,0.4);
+  "></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+  popupAnchor: [0, -10]
 });
 
-const volunteerIcon = new L.Icon({
-  iconUrl: '/volunteer-marker.png',
-  iconRetinaUrl: '/volunteer-marker-2x.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowUrl: '/marker-shadow.png',
-  shadowSize: [41, 41]
+const volunteerIcon = new L.DivIcon({
+  className: 'volunteer-marker',
+  html: `<div style="
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #000000; 
+    color: white;
+    width: 14px; 
+    height: 14px; 
+    border-radius: 50%; 
+    border: 2px solid white;
+    box-shadow: 0 0 4px rgba(0,0,0,0.4);
+  "></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  popupAnchor: [0, -9]
 });
 
 // קומפוננטה חדשה לעדכון המפה
@@ -126,6 +144,7 @@ const MapView = () => {
 
   const handleVisitSubmit = async () => {
     try {
+      console.log('נתוני המשתמש:', user);
       console.log('נתוני הדיאלוג:', visitDialog);
       
       if (!visitDialog.elderId) {
@@ -133,9 +152,14 @@ const MapView = () => {
         throw new Error('נדרש לציין קשיש');
       }
 
+      if (!user?.id) {
+        console.error('ID משתמש חסר:', user);
+        throw new Error('נדרש לציין מתנדב');
+      }
+
       const visitData = {
         elder: visitDialog.elderId,
-        volunteer: user._id,
+        volunteer: user.id,
         date: visitDialog.visitData.date,
         duration: parseInt(visitDialog.visitData.duration),
         status: visitDialog.visitData.status,

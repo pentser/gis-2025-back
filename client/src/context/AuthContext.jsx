@@ -80,11 +80,12 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.message || 'שגיאה בהתחברות');
       }
 
-      console.log('התחברות מוצלחת:', data);
+      console.log('התחברות מוצלחת. תגובת השרת:', data);
       
       if (data.token) {
         localStorage.setItem('token', data.token);
         setUser(data.user);
+        console.log('פרטי המשתמש נשמרו:', data.user);
         return data;
       } else {
         throw new Error('לא התקבל טוקן מהשרת');

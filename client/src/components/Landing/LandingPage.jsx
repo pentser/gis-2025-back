@@ -82,7 +82,7 @@ const LandingPage = () => {
                   variant="contained" 
                   color="secondary"
                   size="large"
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate('/login?role=admin')}
                 >
                   התחברות כמנהל
                 </Button>
