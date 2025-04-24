@@ -1,20 +1,20 @@
 .container {
-  padding: 24px;
+  padding: 20px;
+  height: 100%;
 }
 
 .mapContainer {
-  padding: 24px;
-  height: calc(100vh - 120px);
-  display: flex;
-  flex-direction: column;
+  padding: 20px;
+  margin-bottom: 20px;
 }
 
 .title {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .map {
-  flex: 1;
+  height: 600px;
+  width: 100%;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -165,6 +165,28 @@
 
 .visitsTable td:nth-child(6):contains('בוטל') {
   color: #f44336;
+}
+
+/* עיצוב פאנל המסלול */
+:global(.leaflet-routing-container) {
+  background-color: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+:global(.leaflet-routing-alternatives-container) {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+:global(.leaflet-routing-alt) {
+  padding: 5px;
+  border-bottom: 1px solid #eee;
+}
+
+:global(.leaflet-routing-alt:hover) {
+  background-color: #f5f5f5;
 }
 
 @media (max-width: 600px) {

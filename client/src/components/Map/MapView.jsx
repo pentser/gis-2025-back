@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-routing-machine';
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+import './MapView.css';
 import { fetchMapData, updateVisit, createVisit, fetchWithAuth, fetchVolunteerVisits } from '../../services/api';
 import styles from './MapView.module.css';
 import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
+import RouteIcon from '@mui/icons-material/Route';
 
 // תיקון אייקונים של Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -94,6 +99,17 @@ const MapView = () => {
     }
   });
   const [visits, setVisits] = useState([]);
+  const [filters, setFilters] = useState({
+    radius: 10,
+    elderlyStatus: '',
+    volunteerStatus: '',
+    lastVisitDays: '',
+    searchTerm: '',
+    showRoute: false
+  });
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const [routingControl, setRoutingControl] = useState(null);
+  const mapRef = useRef(null);
 
   useEffect(() => {
     // קבלת מיקום המשתמש
@@ -254,6 +270,47 @@ const MapView = () => {
 
   const filteredElderly = getFilteredElderly();
 
+  // פונקציה לחישוב מסלול אופטימלי
+  const calculateOptimalRoute = () => {
+    if (!userLocation || !filteredElderly.length) return;
+
+    // ניקוי מסלול קודם אם קיים
+    if (routingControl) {
+      routingControl.remove();
+    }
+
+    // יצירת מערך של נקודות דרך
+    const waypoints = [
+      L.latLng(userLocation[0], userLocation[1]), // נקודת התחלה - מיקום המתנדב
+      ...filteredElderly.map(elder => L.latLng(
+        elder.location.coordinates[1],
+        elder.location.coordinates[0]
+      ))
+    ];
+
+    // יצירת בקר מסלול
+    const control = L.Routing.control({
+      waypoints,
+      routeWhileDragging: true,
+      showAlternatives: true,
+      fitSelectedRoutes: true,
+      lineOptions: {
+        styles: [{ color: '#1A365D', weight: 4 }]
+      },
+      createMarker: function() { return null; } // ביטול יצירת סמנים אוטומטיים
+    }).addTo(mapRef.current);
+
+    setRoutingControl(control);
+  };
+
+  // פונקציה לביטול המסלול
+  const clearRoute = () => {
+    if (routingControl) {
+      routingControl.remove();
+      setRoutingControl(null);
+    }
+  };
+
   if (error) {
     return (
       <Container className={styles.container}>
@@ -271,19 +328,29 @@ const MapView = () => {
           </Typography>
           
           {user?.role === 'volunteer' && (
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>רדיוס חיפוש</InputLabel>
-              <Select
-                value={searchRadius}
-                onChange={(e) => setSearchRadius(e.target.value)}
-                label="רדיוס חיפוש"
+            <Box display="flex" gap={2}>
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>רדיוס חיפוש</InputLabel>
+                <Select
+                  value={searchRadius}
+                  onChange={(e) => setSearchRadius(e.target.value)}
+                  label="רדיוס חיפוש"
+                >
+                  <MenuItem value={2}>2 ק"מ</MenuItem>
+                  <MenuItem value={5}>5 ק"מ</MenuItem>
+                  <MenuItem value={10}>10 ק"מ</MenuItem>
+                  <MenuItem value={20}>20 ק"מ</MenuItem>
+                </Select>
+              </FormControl>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<RouteIcon />}
+                onClick={routingControl ? clearRoute : calculateOptimalRoute}
               >
-                <MenuItem value={2}>2 ק"מ</MenuItem>
-                <MenuItem value={5}>5 ק"מ</MenuItem>
-                <MenuItem value={10}>10 ק"מ</MenuItem>
-                <MenuItem value={20}>20 ק"מ</MenuItem>
-              </Select>
-            </FormControl>
+                {routingControl ? 'בטל מסלול' : 'חשב מסלול אופטימלי'}
+              </Button>
+            </Box>
           )}
         </Box>
         
@@ -292,6 +359,7 @@ const MapView = () => {
             center={center}
             zoom={13}
             style={{ height: '100%', width: '100%' }}
+            ref={mapRef}
           >
             <MapUpdater center={center} />
             <TileLayer
@@ -308,6 +376,22 @@ const MapView = () => {
               />
             )}
             
+            {/* הצגת מיקום המתנדב */}
+            {user?.role === 'volunteer' && userLocation && (
+              <Marker
+                position={userLocation}
+                icon={volunteerIcon}
+              >
+                <Popup>
+                  <div>
+                    <h3>מיקום נוכחי</h3>
+                    <p>מתנדב: {user.firstName} {user.lastName}</p>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+            
+            {/* הצגת קשישים */}
             {filteredElderly.map((elder) => (
               <Marker
                 key={elder._id}
@@ -349,31 +433,6 @@ const MapView = () => {
                         תאם ביקור חדש
                       </Button>
                     )}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-
-            {/* סימון מתנדבים - רק למנהלים */}
-            {user?.role === 'admin' && mapData.volunteers.map((volunteer) => (
-              <Marker
-                key={volunteer._id}
-                position={[
-                  volunteer.location.coordinates[1],
-                  volunteer.location.coordinates[0]
-                ]}
-                icon={volunteerIcon}
-              >
-                <Popup>
-                  <div>
-                    <h3>{volunteer.firstName} {volunteer.lastName}</h3>
-                    <p>סטטוס: {volunteer.status}</p>
-                    <p>
-                      פעיל לאחרונה:{' '}
-                      {volunteer.lastActive
-                        ? new Date(volunteer.lastActive).toLocaleDateString('he-IL')
-                        : 'לא ידוע'}
-                    </p>
                   </div>
                 </Popup>
               </Marker>
