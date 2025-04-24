@@ -79,6 +79,58 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
+// פונקציה לחישוב ציון דחיפות
+const calculateUrgencyScore = (elder) => {
+  try {
+    if (!elder.lastVisit) return 100; // אם אין ביקור בכלל - דחיפות מקסימלית
+    
+    const today = new Date();
+    const lastVisitDate = new Date(elder.lastVisit);
+    const daysSinceLastVisit = Math.floor((today - lastVisitDate) / (1000 * 60 * 60 * 24));
+    
+    // חישוב ציון דחיפות לפי מספר הימים
+    if (daysSinceLastVisit > 21) return 100; // מעל 21 יום - דחיפות מקסימלית
+    if (daysSinceLastVisit > 14) return 80;  // מעל 14 יום - דחיפות גבוהה
+    if (daysSinceLastVisit > 7) return 60;   // מעל 7 ימים - דחיפות בינונית
+    if (daysSinceLastVisit > 3) return 40;   // מעל 3 ימים - דחיפות נמוכה
+    return 20; // פחות מ-3 ימים - דחיפות מינימלית
+  } catch (error) {
+    console.error('שגיאה בחישוב דחיפות:', error);
+    return 50; // ערך ברירת מחדל במקרה של שגיאה
+  }
+};
+
+// פונקציה לחישוב ציון מרחק
+const calculateDistanceScore = (distance) => {
+  // המרת מרחק לציון (0-100) - ככל שהמרחק גדול יותר, הציון נמוך יותר
+  return Math.max(0, 100 - (distance * 10));
+};
+
+// פונקציה לחישוב ציון כולל
+const calculateTotalScore = (elder, distance) => {
+  const urgencyScore = calculateUrgencyScore(elder);
+  const distanceScore = calculateDistanceScore(distance);
+  
+  // שקלול הציונים - 70% דחיפות, 30% מרחק
+  return (urgencyScore * 0.7) + (distanceScore * 0.3);
+};
+
+// פונקציה למיון קשישים לפי ציון כולל
+const sortElderlyByScore = (elderly, userLocation) => {
+  return elderly.map(elder => {
+    const distance = calculateDistance(
+      userLocation[0],
+      userLocation[1],
+      elder.location.coordinates[1],
+      elder.location.coordinates[0]
+    );
+    return {
+      ...elder,
+      score: calculateTotalScore(elder, distance)
+    };
+  }).sort((a, b) => b.score - a.score); // מיון בסדר יורד
+};
+
 const MapView = () => {
   const [mapData, setMapData] = useState({ elderly: [], volunteers: [] });
   const [error, setError] = useState(null);
@@ -279,10 +331,16 @@ const MapView = () => {
       routingControl.remove();
     }
 
+    // מיון קשישים לפי ציון כולל
+    const sortedElderly = sortElderlyByScore(filteredElderly, userLocation);
+    
+    // בחירת שני הקשישים עם הציון הגבוה ביותר
+    const topTwoElderly = sortedElderly.slice(0, 2);
+
     // יצירת מערך של נקודות דרך
     const waypoints = [
       L.latLng(userLocation[0], userLocation[1]), // נקודת התחלה - מיקום המתנדב
-      ...filteredElderly.map(elder => L.latLng(
+      ...topTwoElderly.map(elder => L.latLng(
         elder.location.coordinates[1],
         elder.location.coordinates[0]
       ))
@@ -291,14 +349,55 @@ const MapView = () => {
     // יצירת בקר מסלול
     const control = L.Routing.control({
       waypoints,
-      routeWhileDragging: true,
-      showAlternatives: true,
+      routeWhileDragging: false, // ביטול אפשרות גרירת נקודות
+      showAlternatives: false,   // ביטול הצגת חלופות
       fitSelectedRoutes: true,
       lineOptions: {
         styles: [{ color: '#1A365D', weight: 4 }]
       },
       createMarker: function() { return null; } // ביטול יצירת סמנים אוטומטיים
     }).addTo(mapRef.current);
+
+    // הוספת מידע על המסלול
+    control.on('routesfound', function(e) {
+      const routes = e.routes;
+      if (routes && routes.length > 0) {
+        const route = routes[0];
+        const totalDistance = (route.summary.totalDistance / 1000).toFixed(1); // המרה לקילומטרים
+        const totalTime = Math.ceil(route.summary.totalTime / 60); // המרה לדקות
+        
+        // הצגת מידע על המסלול
+        const routeInfo = document.createElement('div');
+        routeInfo.className = 'route-info';
+        routeInfo.innerHTML = `
+          <h3>מידע על המסלול</h3>
+          <p>מרחק כולל: ${totalDistance} ק"מ</p>
+          <p>זמן משוער: ${totalTime} דקות</p>
+          <p>מספר תחנות: ${topTwoElderly.length}</p>
+          <div class="elderly-info">
+            <h4>קשישים במסלול:</h4>
+            ${topTwoElderly.map((elder, index) => `
+              <div class="elderly-item">
+                <p><strong>${index + 1}. ${elder.firstName} ${elder.lastName}</strong></p>
+                <p>דחיפות: ${calculateUrgencyScore(elder)}%</p>
+                <p>מרחק: ${calculateDistance(
+                  userLocation[0],
+                  userLocation[1],
+                  elder.location.coordinates[1],
+                  elder.location.coordinates[0]
+                ).toFixed(1)} ק"מ</p>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        
+        // הוספת המידע לפאנל המסלול
+        const container = document.querySelector('.leaflet-routing-container');
+        if (container) {
+          container.appendChild(routeInfo);
+        }
+      }
+    });
 
     setRoutingControl(control);
   };
@@ -328,28 +427,46 @@ const MapView = () => {
           </Typography>
           
           {user?.role === 'volunteer' && (
-            <Box display="flex" gap={2}>
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>רדיוס חיפוש</InputLabel>
-                <Select
-                  value={searchRadius}
-                  onChange={(e) => setSearchRadius(e.target.value)}
-                  label="רדיוס חיפוש"
-                >
-                  <MenuItem value={2}>2 ק"מ</MenuItem>
-                  <MenuItem value={5}>5 ק"מ</MenuItem>
-                  <MenuItem value={10}>10 ק"מ</MenuItem>
-                  <MenuItem value={20}>20 ק"מ</MenuItem>
-                </Select>
-              </FormControl>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<RouteIcon />}
-                onClick={routingControl ? clearRoute : calculateOptimalRoute}
+            <Box display="flex" gap={2} flexDirection="column" alignItems="flex-end">
+              <Typography 
+                variant="caption" 
+                color="error" 
+                sx={{ 
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)', 
+                  padding: '4px 8px', 
+                  borderRadius: '4px',
+                  border: '1px solid #f44336'
+                }}
               >
-                {routingControl ? 'בטל מסלול' : 'חשב מסלול אופטימלי'}
-              </Button>
+                {filteredElderly.length < 2 
+                  ? 'נדרשים לפחות 2 קשישים באזור לחישוב מסלול'
+                  : 'החישוב מבוסס על 2 הקשישים עם הדחיפות הגבוהה ביותר באזור'
+                }
+              </Typography>
+              <Box display="flex" gap={2}>
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>רדיוס חיפוש</InputLabel>
+                  <Select
+                    value={searchRadius}
+                    onChange={(e) => setSearchRadius(e.target.value)}
+                    label="רדיוס חיפוש"
+                  >
+                    <MenuItem value={2}>2 ק"מ</MenuItem>
+                    <MenuItem value={5}>5 ק"מ</MenuItem>
+                    <MenuItem value={10}>10 ק"מ</MenuItem>
+                    <MenuItem value={20}>20 ק"מ</MenuItem>
+                  </Select>
+                </FormControl>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<RouteIcon />}
+                  onClick={routingControl ? clearRoute : calculateOptimalRoute}
+                  disabled={filteredElderly.length < 2}
+                >
+                  {routingControl ? 'בטל מסלול' : 'חשב מסלול אופטימלי'}
+                </Button>
+              </Box>
             </Box>
           )}
         </Box>
