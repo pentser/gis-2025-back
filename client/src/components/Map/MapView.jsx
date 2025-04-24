@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { fetchMapData, updateVisit, createVisit, fetchWithAuth } from '../../services/api';
+import { fetchMapData, updateVisit, createVisit, fetchWithAuth, fetchVolunteerVisits } from '../../services/api';
 import styles from './MapView.module.css';
 import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
@@ -131,7 +131,14 @@ const MapView = () => {
 
   const loadVisits = async () => {
     try {
-      const data = await fetchWithAuth('/api/visits/my-visits');
+      console.log('מתחיל טעינת ביקורים...');
+      const data = await fetchVolunteerVisits();
+      console.log('התקבלו ביקורים מהשרת:', data);
+      if (!Array.isArray(data)) {
+        console.error('הנתונים שהתקבלו אינם מערך:', data);
+        setVisits([]);
+        return;
+      }
       setVisits(data);
     } catch (err) {
       console.error('שגיאה בטעינת ביקורים:', err);
@@ -185,7 +192,7 @@ const MapView = () => {
       console.log('שולח נתוני ביקור:', visitData);
       
       const response = await createVisit(visitData);
-      console.log('תגובת השרת:', response);
+      console.log('תגובת השרת ליצירת ביקור:', response);
       
       // סגירת הדיאלוג
       setVisitDialog(prev => ({ ...prev, open: false }));
@@ -193,8 +200,11 @@ const MapView = () => {
       // עדכון הנתונים במפה
       await loadMapData(center[0], center[1]);
       
-      // עדכון טבלת הביקורים
-      await loadVisits();
+      // המתנה קצרה לפני טעינת הביקורים מחדש
+      setTimeout(async () => {
+        console.log('טוען ביקורים מחדש אחרי יצירת ביקור חדש...');
+        await loadVisits();
+      }, 1000);
       
       // הצגת הודעת הצלחה
       alert('הביקור נוצר בהצלחה!');

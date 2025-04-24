@@ -22,8 +22,9 @@ import Register from './components/Auth/Register';
 import Profile from './components/Profile/Profile';
 import LandingPage from './components/Landing/LandingPage';
 import ErrorBoundary from './components/ErrorBoundary';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import PrivateRoute from './components/Auth/PrivateRoute';
+import VolunteerVisits from './components/Volunteer/VolunteerVisits';
 
 // יצירת ערכת נושא מותאמת
 const theme = createTheme({
@@ -65,6 +66,12 @@ const cacheRtl = createCache({
   stylisPlugins: [prefixer, rtlPlugin],
 });
 
+// קומפוננט לניתוב דינמי לפי תפקיד המשתמש
+const DefaultRoute = () => {
+  const { user } = useAuth();
+  return <Navigate to={user?.role === 'admin' ? '/app/dashboard' : '/app/my-visits'} replace />;
+};
+
 const App = () => {
   return (
     <CacheProvider value={cacheRtl}>
@@ -77,7 +84,7 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/app" element={<PrivateRoute><Layout /></PrivateRoute>}>
-                  <Route index element={<Navigate to="/app/dashboard" replace />} />
+                  <Route index element={<DefaultRoute />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="map" element={<MapView />} />
                   <Route path="visits" element={<VisitList />} />
@@ -87,6 +94,7 @@ const App = () => {
                   <Route path="elderly/new" element={<ElderlyForm />} />
                   <Route path="elderly/:id" element={<ElderlyForm />} />
                   <Route path="profile" element={<Profile />} />
+                  <Route path="my-visits" element={<VolunteerVisits />} />
                 </Route>
                 <Route path="/visits/new" element={<Navigate to="/app/visits/new" replace />} />
                 <Route path="/visits/:id" element={<Navigate to="/app/visits/:id" replace />} />

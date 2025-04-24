@@ -8,9 +8,9 @@ import ListItemText from '@mui/material/ListItemText';
 import MapIcon from '@mui/icons-material/Map';
 import PeopleIcon from '@mui/icons-material/People';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import PersonIcon from '@mui/icons-material/Person';
 import HomeIcon from '@mui/icons-material/Home';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import { useAuth } from '../../context/AuthContext';
 import styles from './Layout.module.css';
 import { Divider } from '@mui/material';
@@ -19,13 +19,24 @@ const Sidebar = ({ open, onClose }) => {
   const { user } = useAuth();
 
   const menuItems = [
-    { text: 'דף הבית', icon: <HomeIcon />, path: '/' },
-    { text: 'קשישים', icon: <PeopleIcon />, path: '/elderly' },
-    { text: 'ביקורים', icon: <AssignmentIcon />, path: '/visits' },
+    { 
+      text: 'דף הבית', 
+      icon: <HomeIcon />, 
+      path: user?.role === 'admin' ? '/app/dashboard' : '/app/my-visits'
+    },
   ];
 
   if (user?.role === 'admin') {
-    menuItems.push({ text: 'לוח בקרה', icon: <DashboardIcon />, path: '/dashboard' });
+    menuItems.push(
+      { text: 'לוח בקרה', icon: <DashboardIcon />, path: '/app/dashboard' },
+      { text: 'קשישים', icon: <PeopleIcon />, path: '/app/elderly' },
+      { text: 'ביקורים', icon: <AssignmentIcon />, path: '/app/visits' }
+    );
+  } else if (user?.role === 'volunteer') {
+    menuItems.push(
+      { text: 'הביקורים שלי', icon: <VolunteerActivismIcon />, path: '/app/my-visits' },
+      { text: 'מפת קשישים', icon: <MapIcon />, path: '/app/map' }
+    );
   }
 
   return (

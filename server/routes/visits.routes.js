@@ -5,6 +5,20 @@ import Elderly from '../models/elderly.model.js';
 
 const router = express.Router();
 
+// פונקציית עזר לפורמט כתובת
+const formatAddress = (address) => {
+  if (!address) return 'כתובת לא ידועה';
+  
+  const { street, city, zipCode } = address;
+  const parts = [];
+  
+  if (street) parts.push(street);
+  if (city) parts.push(city);
+  if (zipCode) parts.push(zipCode);
+  
+  return parts.length > 0 ? parts.join(', ') : 'כתובת לא ידועה';
+};
+
 // קבלת כל הביקורים
 router.get('/', auth, async (req, res) => {
   try {
@@ -14,6 +28,47 @@ router.get('/', auth, async (req, res) => {
       .sort({ lastVisit: -1 });
     
     res.json(visits);
+  } catch (error) {
+    console.error('שגיאה בקבלת הביקורים:', error);
+    res.status(500).json({ message: 'שגיאה בקבלת הביקורים' });
+  }
+});
+
+// קבלת הביקורים של המתנדב המחובר
+router.get('/my', auth, async (req, res) => {
+  try {
+    console.log('התקבלה בקשה לקבלת ביקורים של מתנדב:', req.user._id);
+    
+    if (!req.user || !req.user._id) {
+      console.error('לא נמצא משתמש מחובר');
+      return res.status(401).json({ message: 'משתמש לא מחובר' });
+    }
+
+    const query = { volunteer: req.user._id };
+    console.log('מחפש ביקורים עם query:', JSON.stringify(query));
+    
+    const visits = await Visit.find(query)
+      .populate('elder', 'firstName lastName address')
+      .sort({ date: -1 })
+      .lean();
+
+    console.log('נמצאו ביקורים:', visits?.length);
+    
+    if (!Array.isArray(visits)) {
+      console.error('התוצאה אינה מערך');
+      return res.json([]);
+    }
+
+    // עיבוד התוצאות עם כתובת מפורמטת
+    const processedVisits = visits.map(visit => ({
+      ...visit,
+      elder: visit.elder ? {
+        ...visit.elder,
+        address: formatAddress(visit.elder.address)
+      } : null
+    }));
+
+    res.json(processedVisits);
   } catch (error) {
     console.error('שגיאה בקבלת הביקורים:', error);
     res.status(500).json({ message: 'שגיאה בקבלת הביקורים' });
