@@ -203,7 +203,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     console.log('קיבלתי בקשת התחברות:', req.body);
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     if (!email || !password) {
       console.log('חסרים פרטי התחברות');
@@ -221,6 +221,16 @@ export const login = async (req, res) => {
     if (!user.isActive) {
       console.log('משתמש לא פעיל:', email);
       return res.status(403).json({ message: 'המשתמש אינו פעיל' });
+    }
+
+    // בדיקת התאמת תפקיד
+    if (role && role !== user.role) {
+      console.log('ניסיון התחברות עם תפקיד לא מתאים:', { requestedRole: role, actualRole: user.role });
+      return res.status(403).json({ 
+        message: user.role === 'admin' ? 
+          'אין לך הרשאות להתחבר כמנהל' : 
+          'אין לך הרשאות להתחבר כמתנדב'
+      });
     }
 
     // בדיקת סיסמה

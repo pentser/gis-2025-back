@@ -64,8 +64,8 @@ const Login = () => {
     }
 
     try {
-      await login({ ...formData, role });
-      if (role === 'admin') {
+      await login({ ...formData, role: isAdmin ? 'admin' : 'volunteer' });
+      if (isAdmin) {
         navigate('/app/dashboard');
       } else {
         navigate('/app/map');
