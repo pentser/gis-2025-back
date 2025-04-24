@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -20,12 +20,22 @@ const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'volunteer' // ברירת מחדל - מתנדב
+    role: 'volunteer'
   });
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // בדיקה אם הגענו מדף הנחיתה עם פרמטר role
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const role = params.get('role');
+    if (role) {
+      setFormData(prev => ({ ...prev, role }));
+    }
+  }, [location]);
 
   const validateForm = () => {
     const errors = {};
@@ -47,7 +57,6 @@ const Login = () => {
       ...prev,
       [name]: value
     }));
-    // נקה שגיאת וולידציה כשהשדה משתנה
     if (validationErrors[name]) {
       setValidationErrors(prev => ({
         ...prev,
@@ -66,7 +75,6 @@ const Login = () => {
 
     try {
       await login(formData);
-      // ניתוב בהתאם לסוג המשתמש
       if (formData.role === 'admin') {
         navigate('/app/dashboard');
       } else {

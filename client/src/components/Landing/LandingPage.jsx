@@ -9,10 +9,12 @@ import {
   Card, 
   CardContent,
   CardActions,
-  useTheme
+  useTheme,
+  Divider
 } from '@mui/material';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import LoginIcon from '@mui/icons-material/Login';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -83,6 +85,37 @@ const LandingPage = () => {
                   onClick={() => navigate('/login')}
                 >
                   התחברות כמנהל
+                </Button>
+              </CardActions>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Divider sx={{ my: 4, backgroundColor: 'white' }} />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Card sx={{ maxWidth: 600, mx: 'auto' }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="center" mb={2}>
+                  <LoginIcon sx={{ fontSize: 40, color: theme.palette.primary.main, mr: 2 }} />
+                  <Typography variant="h4" component="h2" textAlign="center">
+                    מתנדב רשום?
+                  </Typography>
+                </Box>
+                <Typography variant="body1" paragraph textAlign="center">
+                  התחברו למערכת כדי לצפות במפת הקשישים באזור שלכם, לתאם ביקורים ולעדכן את המערכת.
+                </Typography>
+              </CardContent>
+              <CardActions sx={{ justifyContent: 'center', pb: 3 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  startIcon={<LoginIcon />}
+                  onClick={() => navigate('/login?role=volunteer')}
+                >
+                  התחברות כמתנדב
                 </Button>
               </CardActions>
             </Card>
