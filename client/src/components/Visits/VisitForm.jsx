@@ -20,8 +20,10 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { he } from 'date-fns/locale';
 import { fetchVisitById, createVisit, updateVisit, fetchElderly, fetchVolunteers } from '../../services/api';
 import styles from './VisitForm.module.css';
+import { useAuth } from '../../context/AuthContext';
 
 const VisitForm = () => {
+  const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,7 +32,7 @@ const VisitForm = () => {
 
   const [formData, setFormData] = useState({
     elder: elderId || '',
-    volunteer: '',
+    volunteer: user?._id || '',
     date: new Date(),
     duration: 30,
     notes: '',
@@ -53,9 +55,17 @@ const VisitForm = () => {
         const elderlyData = await fetchElderly();
         setElderly(elderlyData);
 
-        // טעינת רשימת המתנדבים
-        const volunteersData = await fetchVolunteers();
-        setVolunteers(volunteersData);
+        // אם המשתמש הוא מתנדב, הגדר אותו אוטומטית
+        if (user && user.role === 'volunteer') {
+          setFormData(prev => ({
+            ...prev,
+            volunteer: user._id
+          }));
+        } else {
+          // אם זה אדמין, טען את רשימת המתנדבים
+          const volunteersData = await fetchVolunteers();
+          setVolunteers(volunteersData);
+        }
 
         // אם יש ID, טען את פרטי הביקור
         if (id) {
@@ -78,7 +88,7 @@ const VisitForm = () => {
     };
 
     loadData();
-  }, [id]);
+  }, [id, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,7 +99,8 @@ const VisitForm = () => {
       const visitData = {
         ...formData,
         date: formData.date.toISOString(),
-        duration: parseInt(formData.duration)
+        duration: parseInt(formData.duration),
+        volunteer: user.role === 'volunteer' ? user._id : formData.volunteer
       };
 
       console.log('שולח נתוני ביקור:', visitData);
@@ -102,7 +113,7 @@ const VisitForm = () => {
 
       setSuccess(true);
       setTimeout(() => {
-        navigate('/app/visits');
+        navigate('/app/map');
       }, 1500);
     } catch (err) {
       console.error('שגיאה בשמירת ביקור:', err);
@@ -151,23 +162,25 @@ const VisitForm = () => {
 
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>מתנדב</InputLabel>
-                <Select
-                  name="volunteer"
-                  value={formData.volunteer}
-                  onChange={handleChange}
-                  required
-                >
-                  {volunteers.map((volunteer) => (
-                    <MenuItem key={volunteer._id} value={volunteer._id}>
-                      {volunteer.firstName} {volunteer.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            {user && user.role === 'admin' && (
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>מתנדב</InputLabel>
+                  <Select
+                    name="volunteer"
+                    value={formData.volunteer}
+                    onChange={handleChange}
+                    required
+                  >
+                    {volunteers.map((volunteer) => (
+                      <MenuItem key={volunteer._id} value={volunteer._id}>
+                        {volunteer.firstName} {volunteer.lastName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
 
             <Grid item xs={12}>
               <FormControl fullWidth>
@@ -236,13 +249,15 @@ const VisitForm = () => {
 
             <Grid item xs={12}>
               <TextField
-                fullWidth
-                label="הערות"
                 name="notes"
+                label="הערות"
                 multiline
                 rows={4}
                 value={formData.notes}
                 onChange={handleChange}
+                fullWidth
+                inputProps={{ maxLength: 500 }}
+                helperText={`${formData.notes.length}/500`}
               />
             </Grid>
 

@@ -167,7 +167,7 @@ const MapView = () => {
   const [error, setError] = useState(null);
   const [center, setCenter] = useState([31.7767, 35.2345]);
   const [userLocation, setUserLocation] = useState(null);
-  const [searchRadius, setSearchRadius] = useState(5); // רדיוס חיפוש בקילומטרים
+  const [searchRadius, setSearchRadius] = useState(30);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [visitDialog, setVisitDialog] = useState({
@@ -190,27 +190,39 @@ const MapView = () => {
     searchTerm: '',
     showRoute: false
   });
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [routingControl, setRoutingControl] = useState(null);
   const mapRef = useRef(null);
 
   useEffect(() => {
-    // קבלת מיקום המשתמש
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation([latitude, longitude]);
-          setCenter([latitude, longitude]);
-          loadMapData(latitude, longitude);
-        },
-        (error) => {
-          console.error('שגיאה בקבלת מיקום:', error);
-          loadMapData(center[0], center[1]);
+    if (user?.role === 'volunteer') {
+      // מנסה לחלץ את המיקום מהכתובת של המתנדב
+      if (user.address) {
+        const addressParts = user.address.split(',');
+        if (addressParts.length >= 2) {
+          const [lat, lng] = addressParts.map(part => parseFloat(part.trim()));
+          if (!isNaN(lat) && !isNaN(lng)) {
+            setUserLocation([lat, lng]);
+            setCenter([lat, lng]);
+            loadMapData(lat, lng);
+          } else {
+            // אם לא הצלחנו לחלץ קואורדינטות תקינות, נשתמש במיקום ברירת מחדל של ירושלים
+            setUserLocation([31.7767, 35.2345]);
+            setCenter([31.7767, 35.2345]);
+            loadMapData(31.7767, 35.2345);
+          }
+        } else {
+          // אם אין מספיק חלקים בכתובת, נשתמש במיקום ברירת מחדל של ירושלים
+          setUserLocation([31.7767, 35.2345]);
+          setCenter([31.7767, 35.2345]);
+          loadMapData(31.7767, 35.2345);
         }
-      );
-    } else {
-      loadMapData(center[0], center[1]);
+      } else {
+        // אם אין כתובת בכלל, נשתמש במיקום ברירת מחדל של ירושלים
+        setUserLocation([31.7767, 35.2345]);
+        setCenter([31.7767, 35.2345]);
+        loadMapData(31.7767, 35.2345);
+      }
     }
 
     // טעינת ביקורים אם המשתמש הוא מתנדב
@@ -441,6 +453,29 @@ const MapView = () => {
     }
   };
 
+  const getCurrentLocation = () => {
+    setIsLoadingLocation(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation([latitude, longitude]);
+          setCenter([latitude, longitude]);
+          loadMapData(latitude, longitude);
+          setIsLoadingLocation(false);
+        },
+        (error) => {
+          console.error('שגיאה בקבלת מיקום:', error);
+          setError('שגיאה בקבלת המיקום הנוכחי');
+          setIsLoadingLocation(false);
+        }
+      );
+    } else {
+      setError('הדפדפן שלך לא תומך בשירותי מיקום');
+      setIsLoadingLocation(false);
+    }
+  };
+
   if (error) {
     return (
       <Container className={styles.container}>
@@ -475,19 +510,19 @@ const MapView = () => {
                 }
               </Typography>
               <Box display="flex" gap={2}>
-                <FormControl sx={{ minWidth: 200 }}>
-                  <InputLabel>רדיוס חיפוש</InputLabel>
-                  <Select
-                    value={searchRadius}
-                    onChange={(e) => setSearchRadius(e.target.value)}
-                    label="רדיוס חיפוש"
-                  >
-                    <MenuItem value={2}>2 ק"מ</MenuItem>
-                    <MenuItem value={5}>5 ק"מ</MenuItem>
-                    <MenuItem value={10}>10 ק"מ</MenuItem>
-                    <MenuItem value={20}>20 ק"מ</MenuItem>
-                  </Select>
-                </FormControl>
+                <TextField
+                  sx={{ minWidth: 200 }}
+                  label="רדיוס חיפוש (ק״מ)"
+                  type="number"
+                  value={searchRadius}
+                  onChange={(e) => setSearchRadius(Number(e.target.value))}
+                  InputProps={{
+                    inputProps: { 
+                      min: 1,
+                      max: 50
+                    }
+                  }}
+                />
                 <Button
                   variant="contained"
                   color="primary"
@@ -594,7 +629,7 @@ const MapView = () => {
       {user?.role === 'volunteer' && (
         <Paper className={styles.visitsTable} sx={{ mt: 2, p: 2 }}>
           <Typography variant="h5" component="h2" gutterBottom>
-            ביקורים שלי
+            דיווחים/ביקורים שלי
           </Typography>
           <TableContainer>
             <Table>

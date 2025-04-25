@@ -25,7 +25,7 @@ import ContactForm from './components/Contact/ContactForm';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import PrivateRoute from './components/Auth/PrivateRoute';
-import VolunteerVisits from './components/Volunteer/VolunteerVisits';
+import VolunteerVisits from './components/volunteer/VolunteerVisits';
 
 // יצירת ערכת נושא מותאמת
 const theme = createTheme({
@@ -97,6 +97,7 @@ const App = () => {
                   <Route path="elderly/:id" element={<ElderlyForm />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="my-visits" element={<VolunteerVisits />} />
+                  <Route path="myvisits" element={<VolunteerVisits />} />
                 </Route>
                 <Route path="/visits/new" element={<Navigate to="/app/visits/new" replace />} />
                 <Route path="/visits/:id" element={<Navigate to="/app/visits/:id" replace />} />

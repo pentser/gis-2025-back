@@ -25,7 +25,28 @@
 
 .appBar {
   z-index: 1201;
-  background-color: var(--primary-color);
+  background-color: #1976d2; /* או כל צבע אחר שתרצה */
+}
+
+.appBar :global(.MuiToolbar-root) {
+  min-height: 64px;
+}
+
+/* התאמה למסכים קטנים */
+@media (max-width: 900px) {
+  .appBar :global(.MuiToolbar-root) {
+    padding: 0 8px;
+  }
+  
+  .appBar :global(.MuiTab-root) {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+  }
+
+  .appBar :global(.MuiButton-root) {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
 }
 
 .content {

@@ -67,25 +67,7 @@ const VolunteerVisits = () => {
       setLoading(true);
       setError(null);
       const data = await fetchVolunteerVisits();
-      
-      // מיון הביקורים לפי דחיפות ותאריך
-      const sortedVisits = data.sort((a, b) => {
-        const urgencyA = calculateUrgency(a);
-        const urgencyB = calculateUrgency(b);
-        
-        // קודם ממיינים לפי דחיפות
-        if (urgencyA !== urgencyB) {
-          if (urgencyA === 'high') return -1;
-          if (urgencyB === 'high') return 1;
-          if (urgencyA === 'medium') return -1;
-          return 1;
-        }
-        
-        // אם הדחיפות זהה, ממיינים לפי תאריך (מהחדש לישן)
-        return new Date(b.date) - new Date(a.date);
-      });
-      
-      setVisits(sortedVisits);
+      setVisits(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -94,7 +76,22 @@ const VolunteerVisits = () => {
   };
 
   const handleNewVisit = (elderId) => {
-    navigate(`/visits/new?elderId=${elderId}`);
+    navigate(`/app/visits/new?elderId=${elderId}`);
+  };
+
+  // פונקציה להמרת תאריך לפורמט הרצוי
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('he-IL');
+  };
+
+  // פונקציה להמרת שעה לפורמט הרצוי
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('he-IL', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
 
   if (loading) {
@@ -120,64 +117,61 @@ const VolunteerVisits = () => {
     <Container className={styles.container}>
       <Paper className={styles.paper}>
         <Typography variant="h5" component="h1" gutterBottom>
-          הביקורים שלי
+          ביקורים שלי
         </Typography>
 
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>קשיש</TableCell>
-                <TableCell>כתובת</TableCell>
-                <TableCell>ביקור אחרון</TableCell>
-                <TableCell>ימים מאז ביקור</TableCell>
-                <TableCell>דחיפות</TableCell>
-                <TableCell>פעולות</TableCell>
+                <TableCell align="right" width="100px">תאריך</TableCell>
+                <TableCell align="right" width="80px">שעה</TableCell>
+                <TableCell align="right" width="120px">קשיש</TableCell>
+                <TableCell align="right" width="200px">כתובת</TableCell>
+                <TableCell align="right" width="100px">משך (דקות)</TableCell>
+                <TableCell align="right" width="100px">סטטוס</TableCell>
+                <TableCell align="right" width="200px" className={styles.notesCell}>הערות</TableCell>
+                <TableCell align="right" width="120px">פעולות</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {visits.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
+                  <TableCell colSpan={8} align="center">
                     <Typography>אין ביקורים להצגה</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                visits.map((visit) => {
-                  const daysSinceLastVisit = visit.lastVisit
-                    ? Math.floor((new Date() - new Date(visit.lastVisit)) / (1000 * 60 * 60 * 24))
-                    : null;
-                  const urgency = calculateUrgency(visit);
-
-                  return (
-                    <TableRow key={visit._id} className={styles[`urgency-${urgency}`]}>
-                      <TableCell>
-                        {visit.elder ? `${visit.elder.firstName} ${visit.elder.lastName}` : 'לא ידוע'}
-                      </TableCell>
-                      <TableCell>{visit.elder?.address || 'כתובת לא ידועה'}</TableCell>
-                      <TableCell>
-                        {visit.lastVisit
-                          ? new Date(visit.lastVisit).toLocaleDateString('he-IL')
-                          : 'אין ביקור קודם'}
-                      </TableCell>
-                      <TableCell>
-                        {daysSinceLastVisit !== null ? `${daysSinceLastVisit} ימים` : 'לא ידוע'}
-                      </TableCell>
-                      <TableCell>
-                        <UrgencyChip urgency={urgency} />
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={() => handleNewVisit(visit.elder?._id)}
-                        >
-                          דווח ביקור
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                visits.map((visit) => (
+                  <TableRow key={visit._id}>
+                    <TableCell align="right">{formatDate(visit.date)}</TableCell>
+                    <TableCell align="right">{formatTime(visit.date)}</TableCell>
+                    <TableCell align="right">
+                      {visit.elder ? `${visit.elder.firstName} ${visit.elder.lastName}` : 'לא ידוע'}
+                    </TableCell>
+                    <TableCell align="right">{visit.elder?.address || 'כתובת לא ידועה'}</TableCell>
+                    <TableCell align="right">{visit.duration}</TableCell>
+                    <TableCell align="right">{visit.status}</TableCell>
+                    <TableCell align="right" className={styles.notesCell}>
+                      <div 
+                        className={styles.notesContent}
+                        data-notes={visit.notes || '-'}
+                      >
+                        {visit.notes || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleNewVisit(visit.elder?._id)}
+                        className={styles.actionButton}
+                      >
+                        דווח/עדכן
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
