@@ -27,7 +27,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Body parsing middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // לוגים לבקשות נכנסות
 app.use((req, res, next) => {
@@ -45,18 +47,20 @@ app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/visits', visitsRoutes);
 app.use('/api/elderly', elderlyRoutes);
-app.use('/api/volunteers', volunteerRoutes);
+app.use('/api/volunteer', volunteerRoutes);
 
 // חיבור למסד הנתונים
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('מחובר למסד הנתונים MongoDB'))
-  .catch(err => console.error('שגיאה בהתחברות למסד הנתונים:', err));
-
-// הפעלת השרת
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`השרת פועל בפורט ${PORT}`);
-});
+  .then(() => {
+    console.log('מחובר למסד הנתונים MongoDB');
+    const port = process.env.PORT || 5000;
+    app.listen(port, () => {
+      console.log(`השרת פועל בפורט ${port}`);
+    });
+  })
+  .catch((error) => {
+    console.error('שגיאה בהתחברות למסד הנתונים:', error);
+  });
 
 // טיפול בשגיאות כדי למנוע החזרת HTML
 app.use((err, req, res, next) => {
@@ -70,9 +74,6 @@ app.use((err, req, res, next) => {
 
 // טיפול ב-404 כדי להחזיר JSON במקום דף HTML
 app.use((req, res) => {
-  console.log(`דף לא נמצא: ${req.method} ${req.path}`);
-  res.status(404).json({
-    error: true,
-    message: `הנתיב ${req.path} לא נמצא`
-  });
+  console.log(`דף לא נמצא: ${req.method} ${req.url}`);
+  res.status(404).json({ message: 'הדף המבוקש לא נמצא' });
 }); 

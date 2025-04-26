@@ -1,4 +1,14 @@
 import React, { useState } from 'react';
+import {
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Grid,
+  Alert,
+  Box
+} from '@mui/material';
 import styles from './ContactForm.module.css';
 
 const ContactForm = () => {
@@ -8,9 +18,10 @@ const ContactForm = () => {
     phone: '',
     email: '',
     homeAddress: '',
-    workAddress: '',
     notes: ''
   });
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,74 +33,138 @@ const ContactForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // כאן נוסיף את הלוגיקה לשליחת הטופס לשרת
-    console.log('טופס נשלח:', formData);
+    try {
+      // כאן תהיה הלוגיקה לשליחת הטופס לשרת
+      console.log('טופס נשלח:', formData);
+      setSuccess(true);
+      setFormData({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        email: '',
+        homeAddress: '',
+        notes: ''
+      });
+    } catch (err) {
+      setError('אירעה שגיאה בשליחת הטופס');
+    }
   };
 
   return (
-    <div className={styles.container}>
-      <h2>טופס יצירת קשר</h2>
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <label>שם פרטי:</label>
-        <input 
-          name="firstName" 
-          value={formData.firstName} 
-          onChange={handleChange} 
-          required 
-        />
+    <Container className={styles.container}>
+      <Paper className={styles.paper}>
+        <Typography variant="h5" component="h1" gutterBottom align="center">
+          טופס יצירת קשר
+        </Typography>
 
-        <label>שם משפחה:</label>
-        <input 
-          name="lastName" 
-          value={formData.lastName} 
-          onChange={handleChange} 
-          required 
-        />
+        {error && (
+          <Alert severity="error" className={styles.alert}>
+            {error}
+          </Alert>
+        )}
 
-        <label>טלפון:</label>
-        <input 
-          type="tel" 
-          name="phone" 
-          value={formData.phone} 
-          onChange={handleChange} 
-          required 
-        />
+        {success && (
+          <Alert severity="success" className={styles.alert}>
+            הטופס נשלח בהצלחה!
+          </Alert>
+        )}
 
-        <label>מייל:</label>
-        <input 
-          type="email" 
-          name="email" 
-          value={formData.email} 
-          onChange={handleChange} 
-          required 
-        />
-
-        <label>כתובת מגורים:</label>
-        <input 
-          name="homeAddress" 
-          value={formData.homeAddress} 
-          onChange={handleChange} 
-          required 
-        />
-
-        <label>כתובת עבודה:</label>
-        <input 
-          name="workAddress" 
-          value={formData.workAddress} 
-          onChange={handleChange} 
-        />
-
-        <label>הערות:</label>
-        <textarea
-          name="notes"
-          value={formData.notes}
-          onChange={handleChange}
-          rows={4}
-        />
-
-        <button type="submit">שלח</button>
-      </form>
-    </div>
+        <form onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                required
+                fullWidth
+                label="שם פרטי"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                InputLabelProps={{
+                  sx: { backgroundColor: 'white', px: 1 }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                required
+                fullWidth
+                label="שם משפחה"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                InputLabelProps={{
+                  sx: { backgroundColor: 'white', px: 1 }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                required
+                fullWidth
+                label="טלפון"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                InputLabelProps={{
+                  sx: { backgroundColor: 'white', px: 1 }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                required
+                fullWidth
+                type="email"
+                label="דוא״ל"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                InputLabelProps={{
+                  sx: { backgroundColor: 'white', px: 1 }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                required
+                fullWidth
+                label="כתובת"
+                name="homeAddress"
+                value={formData.homeAddress}
+                onChange={handleChange}
+                InputLabelProps={{
+                  sx: { backgroundColor: 'white', px: 1 }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="הערות"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                multiline
+                rows={4}
+                InputLabelProps={{
+                  sx: { backgroundColor: 'white', px: 1 }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                className={styles.submitButton}
+              >
+                שלח טופס
+              </Button>
+            </Grid>
+          </Grid>
+        </form>
+      </Paper>
+    </Container>
   );
 };
 

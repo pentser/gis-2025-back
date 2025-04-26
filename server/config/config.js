@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
-  port: process.env.PORT || 3001,
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/gis-2025',
+  port: process.env.PORT || 5000,
+  mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/gis-2025',
   jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
   jwtExpiration: '24h',
   // הגדרות נוספות למערכת
@@ -22,14 +22,17 @@ export const config = {
   // הגדרות אבטחה
   security: {
     bcryptSaltRounds: 10,
-    jwtExpiresIn: '7d',
+    jwtExpiresIn: '24h',
     cookieMaxAge: 7 * 24 * 60 * 60 * 1000 // שבוע
   },
   // הגדרות קורס
   cors: {
     origin: process.env.NODE_ENV === 'production' 
       ? process.env.CLIENT_URL 
-      : 'http://localhost:5174',
-    credentials: true
+      : ['http://localhost:5173', 'http://localhost:5174'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Content-Type']
   }
 }; 

@@ -609,4 +609,44 @@ export const updateProfile = async (req, res) => {
       error: error.message 
     });
   }
+};
+
+// אימות טוקן
+export const validate = async (req, res) => {
+  try {
+    // אם הגענו לכאן, זה אומר שהטוקן תקין (בגלל middleware auth)
+    // נחזיר את פרטי המשתמש
+    const user = await User.findById(req.user._id).select('-password -tokens');
+    if (!user) {
+      return res.status(404).json({ message: 'משתמש לא נמצא' });
+    }
+
+    // אם המשתמש הוא מתנדב, נביא גם את המידע מהמודל של המתנדב
+    let volunteerData = null;
+    if (user.role === 'volunteer') {
+      volunteerData = await findVolunteerByUserId(user._id);
+    }
+
+    const userResponse = {
+      id: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      address: user.address
+    };
+
+    if (volunteerData) {
+      userResponse.volunteer = {
+        id: volunteerData._id,
+        status: volunteerData.status || 'available',
+        lastLogin: volunteerData.lastLogin
+      };
+    }
+
+    res.json({ user: userResponse });
+  } catch (error) {
+    console.error('שגיאה באימות טוקן:', error);
+    res.status(500).json({ message: 'שגיאה באימות טוקן' });
+  }
 }; 
