@@ -74,6 +74,27 @@ userSchema.methods.toJSON = function() {
 // הוספת אינדקס גיאוגרפי למיקום
 userSchema.index({ location: '2dsphere' });
 
+// Add synchronization middleware
+userSchema.post('save', async function(doc) {
+  if (doc.role === 'volunteer') {
+    try {
+      const volunteer = await Volunteer.findOne({ user: doc._id });
+      if (volunteer) {
+        // Sync common fields
+        volunteer.email = doc.email;
+        volunteer.firstName = doc.firstName;
+        volunteer.lastName = doc.lastName;
+        volunteer.address = doc.address;
+        volunteer.location = doc.location;
+        volunteer.isActive = doc.isActive;
+        await volunteer.save();
+      }
+    } catch (error) {
+      console.error('Error syncing user to volunteer:', error);
+    }
+  }
+});
+
 const User = mongoose.model('User', userSchema);
 
 export default User; 

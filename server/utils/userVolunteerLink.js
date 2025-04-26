@@ -98,13 +98,30 @@ export const findUserAndVolunteer = async (email) => {
  */
 export const updateVolunteerByUserId = async (userId, updateData) => {
   try {
-    return await Volunteer.findOneAndUpdate(
+    // Update volunteer
+    const volunteer = await Volunteer.findOneAndUpdate(
       { user: userId },
       updateData,
       { new: true, runValidators: true }
     );
+
+    if (volunteer) {
+      // Update corresponding user fields
+      const userUpdate = {
+        email: volunteer.email,
+        firstName: volunteer.firstName,
+        lastName: volunteer.lastName,
+        address: volunteer.address,
+        location: volunteer.location,
+        isActive: volunteer.isActive
+      };
+
+      await User.findByIdAndUpdate(userId, userUpdate, { new: true });
+    }
+
+    return volunteer;
   } catch (error) {
-    console.error('שגיאה בעדכון מתנדב:', error);
+    console.error('Error updating volunteer and user:', error);
     throw error;
   }
 }; 

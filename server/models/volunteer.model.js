@@ -108,6 +108,26 @@ volunteerSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+// Add synchronization middleware
+volunteerSchema.post('save', async function(doc) {
+  try {
+    const User = mongoose.model('User');
+    const user = await User.findById(doc.user);
+    if (user) {
+      // Sync common fields
+      user.email = doc.email;
+      user.firstName = doc.firstName;
+      user.lastName = doc.lastName;
+      user.address = doc.address;
+      user.location = doc.location;
+      user.isActive = doc.isActive;
+      await user.save();
+    }
+  } catch (error) {
+    console.error('Error syncing volunteer to user:', error);
+  }
+});
+
 const Volunteer = mongoose.model('Volunteer', volunteerSchema);
 
 export default Volunteer; 

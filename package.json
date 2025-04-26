@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "jsdoc": "^4.0.4"
+  },
+  "dependencies": {
+    "helmet": "^8.1.0"
   }
 }
