@@ -1,38 +1,40 @@
 .dashboard {
-  padding: 20px;
+  padding: 16px;
 }
 
 .dashboard h2 {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: 16px;
   color: var(--primary-color);
 }
 
-.statsGrid {
-  height: 100%;
-  margin-bottom: var(--spacing-xl) !important;
+.statsRow {
+  margin-bottom: 16px !important;
 }
 
-.statsCard {
+.miniStatsCard {
   height: 100%;
   text-align: center;
   transition: transform 0.2s ease;
+  padding: 8px;
 }
 
-.statsCard:hover {
-  transform: translateY(-2px);
+.miniStatsCard h3 {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: 8px;
 }
 
-.statsCard h3 {
-  color: var(--primary-color);
-  margin-bottom: var(--spacing-md);
+.miniStatsCard p {
+  font-weight: 500;
+  margin: 0;
 }
 
 .section {
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .section h3 {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: 16px;
   color: var(--primary-color);
 }
 
@@ -56,7 +58,8 @@
 }
 
 .mapCard {
-  height: 500px;
+  height: calc(100vh - 300px);
+  min-height: 500px;
   width: 100%;
 }
 
@@ -64,7 +67,6 @@
 .mapCard :global(.leaflet-container) {
   height: 100%;
   width: 100%;
-  min-height: 450px;
   border-radius: 4px;
 }
 
@@ -72,6 +74,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 16px;
 }
 
 .dashboardHeader h2 {
@@ -84,10 +87,15 @@
 
 @media (max-width: 600px) {
   .dashboard {
-    padding: var(--spacing-md);
+    padding: 12px;
   }
 
-  .statsCard {
-    margin-bottom: var(--spacing-md);
+  .miniStatsCard {
+    margin-bottom: 8px;
+  }
+
+  .mapCard {
+    height: calc(100vh - 400px);
+    min-height: 300px;
   }
 } 
