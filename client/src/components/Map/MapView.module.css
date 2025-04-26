@@ -147,7 +147,9 @@
 }
 
 .title {
-  margin-bottom: 20px;
+  margin-bottom: 0;
+  padding-right: 16px; 
+  padding-top: 16px;
 }
 
 .map {

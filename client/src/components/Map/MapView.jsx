@@ -183,6 +183,9 @@ const MapView = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [isUsingCurrentLocation, setIsUsingCurrentLocation] = useState(false);
   const [searchRadius, setSearchRadius] = useState(10);
+  const [searchName, setSearchName] = useState('');
+  const [searchAddress, setSearchAddress] = useState('');
+  const [lastVisitFilter, setLastVisitFilter] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -494,6 +497,36 @@ const MapView = () => {
     return 'כתובת לא זמינה';
   };
 
+  // פונקציה לסינון קשישים לפי שם, כתובת ורדיוס
+  const filterElderly = (elder) => {
+    const withinRadius = !userLocation || isWithinRadius(elder.location, userLocation, searchRadius);
+    const matchesName = !searchName || 
+      `${elder.firstName} ${elder.lastName}`.toLowerCase().includes(searchName.toLowerCase());
+    const matchesAddress = !searchAddress || 
+      formatAddress(elder.address).toLowerCase().includes(searchAddress.toLowerCase());
+    
+    let matchesLastVisit = true;
+    if (lastVisitFilter) {
+      const daysSinceLastVisit = elder.lastVisit ? 
+        Math.floor((new Date() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)) : 
+        Number.POSITIVE_INFINITY;
+
+      switch (lastVisitFilter) {
+        case 'week':
+          matchesLastVisit = daysSinceLastVisit <= 7;
+          break;
+        case 'twoWeeks':
+          matchesLastVisit = daysSinceLastVisit > 7 && daysSinceLastVisit <= 14;
+          break;
+        case 'moreThanTwoWeeks':
+          matchesLastVisit = daysSinceLastVisit > 14;
+          break;
+      }
+    }
+
+    return withinRadius && matchesName && matchesAddress && matchesLastVisit;
+  };
+
   if (error) {
     return (
       <Box 
@@ -519,9 +552,46 @@ const MapView = () => {
           {user?.role === 'volunteer' && (
             <Box display="flex" gap={2} flexDirection="column" alignItems="flex-end">
               <Box display="flex" gap={2}>
+                <FormControl sx={{ width: '160px' }}>
+                  <InputLabel>סינון לפי ביקור אחרון</InputLabel>
+                  <Select
+                    value={lastVisitFilter}
+                    onChange={(e) => setLastVisitFilter(e.target.value)}
+                    label="סינון לפי ביקור אחרון"
+                  >
+                    <MenuItem value="">הכל</MenuItem>
+                    <MenuItem value="week">שבוע אחרון</MenuItem>
+                    <MenuItem value="twoWeeks">שבועיים אחרונים</MenuItem>
+                    <MenuItem value="moreThanTwoWeeks">שבועיים ויותר</MenuItem>
+                  </Select>
+                </FormControl>
                 <TextField
                   sx={{ 
-                    width: '150px',
+                    width: '160px',
+                    '& .MuiInputBase-root': {
+                      height: '56px'
+                    }
+                  }}
+                  label="חיפוש לפי כתובת"
+                  value={searchAddress}
+                  onChange={(e) => setSearchAddress(e.target.value)}
+                  placeholder="הקלד כתובת..."
+                />
+                <TextField
+                  sx={{ 
+                    width: '160px',
+                    '& .MuiInputBase-root': {
+                      height: '56px'
+                    }
+                  }}
+                  label="חיפוש לפי שם"
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  placeholder="הקלד שם קשיש..."
+                />
+                <TextField
+                  sx={{ 
+                    width: '120px',
                     '& .MuiInputBase-root': {
                       height: '56px'
                     }
@@ -600,7 +670,7 @@ const MapView = () => {
             
             {/* סמנים עבור זקנים */}
             {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly
-              .filter(elder => !userLocation || isWithinRadius(elder.location, userLocation, searchRadius))
+              .filter(filterElderly)
               .map((elder) => (
                 <Marker
                   key={elder._id}
