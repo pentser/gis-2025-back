@@ -62,9 +62,10 @@ export default function Layout() {
     return false;
   };
 
-  // פונקציה פשוטה לניווט למפה עם המיקום הנוכחי
+  // עדכון הפונקציה handleLocationClick
   const handleLocationClick = () => {
-    navigate('/app/map');
+    // נפעיל את הפונקציה handleLocationToggle מתוך MapView
+    window.dispatchEvent(new CustomEvent('toggleLocation'));
   };
 
   return (
