@@ -1,6 +1,6 @@
 import express from 'express';
 import { auth } from '../middleware/auth.middleware.js';
-import { register, login, getMe, logout, updateProfile } from '../controllers/auth.controller.js';
+import { register, login, getMe, logout, updateProfile, validate } from '../controllers/auth.controller.js';
 
 const router = express.Router();
 
@@ -10,10 +10,13 @@ router.post('/register', register);
 // נתיב להתחברות
 router.post('/login', login);
 
-// נתיב לקבלת פרטי המשתמש המחובר
+// נתיב לאימות טוקן
+router.get('/validate', auth, validate);
+
+// נתיב לקבלת פרטי משתמש
 router.get('/me', auth, getMe);
 
-// התנתקות
+// נתיב להתנתקות
 router.post('/logout', auth, logout);
 
 // עדכון פרופיל

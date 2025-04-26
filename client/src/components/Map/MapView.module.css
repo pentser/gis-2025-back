@@ -151,6 +151,7 @@
 }
 
 .map {
+  position: relative;
   height: 100%;
   width: 100%;
 }
@@ -481,4 +482,62 @@
   .mapLegend {
     font-size: 0.875rem;
   }
+}
+
+/* הוספת סטיילינג לכפתורי הזום */
+:global(.leaflet-control-zoom) {
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+:global(.leaflet-control-zoom-in),
+:global(.leaflet-control-zoom-out) {
+  background-color: white !important;
+  color: #333 !important;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  text-align: center !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+  border: none !important;
+  display: block !important;
+}
+
+:global(.leaflet-control-zoom-in) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+:global(.leaflet-control-zoom-in:hover),
+:global(.leaflet-control-zoom-out:hover) {
+  background-color: #f4f4f4 !important;
+  color: #000 !important;
+}
+
+/* וידוא שכל הכפתורים של המפה מוצגים */
+:global(.leaflet-control-container) {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+:global(.leaflet-top),
+:global(.leaflet-bottom) {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+:global(.leaflet-top) {
+  top: 0;
+}
+
+:global(.leaflet-right) {
+  right: 0;
+}
+
+/* מרווח מהקצוות */
+:global(.leaflet-control) {
+  margin: 10px !important;
+  clear: both;
 } 

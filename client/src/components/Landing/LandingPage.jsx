@@ -38,14 +38,14 @@ const LandingPage = () => {
               onClick={() => navigate('/login?role=volunteer')}
               className={styles.navButton}
             >
-              התחברות כמתנדב
+             התחבר כמתנדב
             </Button>
             <Button 
               color="inherit" 
               onClick={() => navigate('/login?role=admin')}
               className={styles.navButton}
             >
-              התחברות כמנהל
+              התחבר כמנהל
             </Button>
             <Button 
               color="inherit" 

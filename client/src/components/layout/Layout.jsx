@@ -23,13 +23,13 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import Sidebar from './Sidebar';
 import styles from './Layout.module.css';
 import { useAuth } from '../../context/AuthContext';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard';
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -37,10 +37,6 @@ export default function Layout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
-  };
-
-  const handleHomeClick = () => {
     navigate('/');
   };
 
@@ -53,7 +49,7 @@ export default function Layout() {
         navigate('/app/myvisits');
         break;
       case 2:
-        navigate('/volunteerprofile');
+        navigate('/app/profile');
         break;
     }
   };
@@ -62,8 +58,13 @@ export default function Layout() {
     const path = location.pathname;
     if (path === '/app/map') return 0;
     if (path === '/app/myvisits') return 1;
-    if (path === '/volunteerprofile') return 2;
-    return 0;
+    if (path === '/app/profile') return 2;
+    return false;
+  };
+
+  // פונקציה פשוטה לניווט למפה עם המיקום הנוכחי
+  const handleLocationClick = () => {
+    navigate('/app/map');
   };
 
   return (
@@ -71,34 +72,13 @@ export default function Layout() {
       <CssBaseline />
       <AppBar position="fixed" className={styles.appBar}>
         <Toolbar sx={{ padding: '0 16px' }}>
-          {/* Right Section - Logo, Heart Icon, and User Info */}
+          {/* Right Section - User Info and Logout */}
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center',
             gap: 2,
             minWidth: 'fit-content'
           }}>
-            <Typography 
-              variant="h6" 
-              noWrap 
-              onClick={handleHomeClick}
-              sx={{ 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}
-            >
-              לב לקשיש
-              <FavoriteIcon 
-                sx={{ 
-                  color: '#ff4444',
-                  fontSize: '1.2rem',
-                  marginRight: '4px'
-                }} 
-              />
-            </Typography>
-
             {user && (
               <Box sx={{ 
                 display: 'flex', 
@@ -121,7 +101,7 @@ export default function Layout() {
           </Box>
 
           {/* Center Section - Navigation Tabs */}
-          {user && user.role === 'volunteer' && (
+          {user && (
             <Box sx={{ 
               flexGrow: 1, 
               display: 'flex', 
@@ -159,22 +139,25 @@ export default function Layout() {
             </Box>
           )}
 
-          {/* Left Section - Current Location Button */}
-          <Box sx={{ 
-            minWidth: 'fit-content',
-            marginLeft: 2
-          }}>
-            <Button
-              color="inherit"
-              startIcon={<MyLocationIcon />}
-              sx={{ 
-                whiteSpace: 'nowrap',
-                fontSize: '0.9rem'
-              }}
-            >
-              השתמש במיקום נוכחי
-            </Button>
-          </Box>
+          {/* Left Section - Simple Location Button */}
+          {user && (
+            <Box sx={{ 
+              minWidth: 'fit-content',
+              marginLeft: 2
+            }}>
+              <Button
+                color="inherit"
+                startIcon={<MyLocationIcon />}
+                onClick={handleLocationClick}
+                sx={{ 
+                  whiteSpace: 'nowrap',
+                  fontSize: '0.9rem'
+                }}
+              >
+                השתמש במיקום נוכחי
+              </Button>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 

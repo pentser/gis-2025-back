@@ -12,7 +12,7 @@ export const auth = async (req, res, next) => {
     }
 
     // אימות הטוקן
-    const decoded = jwt.verify(token, config.jwtSecret);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // מציאת המשתמש במסד הנתונים
     const user = await User.findById(decoded.userId);

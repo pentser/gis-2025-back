@@ -7,7 +7,7 @@ const AuthContext = createContext(null);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth חייב להיות בתוך AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
@@ -18,34 +18,38 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    checkAuth();
+    const token = localStorage.getItem('token');
+    if (token) {
+      // בדיקת תקינות הטוקן
+      verifyToken();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  const verifyToken = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
-      const response = await fetch(`${API_URL}/api/auth/me`, {
+    try {
+      const response = await fetch('/api/auth/validate', {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${token}`
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data);
-      } else {
-        console.error('שגיאה באימות:', await response.text());
-        localStorage.removeItem('token');
-        setUser(null);
+      if (!response.ok) {
+        throw new Error('Token validation failed');
       }
+
+      const data = await response.json();
+      setUser(data.user);
     } catch (error) {
-      console.error('שגיאה בבדיקת אותנטיקציה:', error);
+      console.error('Token verification error:', error);
       localStorage.removeItem('token');
       setUser(null);
     } finally {
@@ -53,141 +57,108 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (formData) => {
+  const register = async (userData) => {
     try {
-      setError(null);
-      const { email, password, role } = formData;
-      
-      if (!email || !password) {
-        throw new Error('נדרש אימייל וסיסמה');
-      }
-
-      console.log('מנסה להתחבר עם:', { email, role });
-      
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password, role })
+        body: JSON.stringify(userData)
       });
 
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('שגיאת התחברות:', data);
-        setError(data.message || 'שגיאה בהתחברות');
-        throw new Error(data.message || 'שגיאה בהתחברות');
+        throw new Error(data.message || 'Registration failed');
       }
 
-      console.log('התחברות מוצלחת. תגובת השרת:', data);
-      
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        setUser(data.user);
-        console.log('פרטי המשתמש נשמרו:', data.user);
-        return data;
-      } else {
-        throw new Error('לא התקבל טוקן מהשרת');
-      }
-    } catch (error) {
-      console.error('שגיאה בתהליך ההתחברות:', error);
-      setError(error.message);
-      throw error;
-    }
-  };
-
-  const register = async (userData) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('שגיאת הרשמה:', data);
-        setError(data.message || 'שגיאה בהרשמה');
-        throw new Error(data.message || 'שגיאה בהרשמה');
-      }
-
-      console.log('הרשמה מוצלחת:', data);
-      
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        setUser(data.user);
-        return data;
-      } else {
-        throw new Error('לא התקבל טוקן מהשרת');
-      }
-    } catch (error) {
-      console.error('שגיאה בהרשמה:', error);
-      setError(error.message);
-      throw error;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        await fetch(`${API_URL}/api/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-    } catch (error) {
-      console.error('שגיאה בהתנתקות:', error);
-    } finally {
-      localStorage.removeItem('token');
-      setUser(null);
-    }
-  };
-
-  const updateProfile = async (profileData) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(profileData),
-      });
-
-      if (!response.ok) {
-        throw new Error('שגיאה בעדכון הפרופיל');
-      }
-
-      const data = await response.json();
-      setUser(data);
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
       return data;
     } catch (error) {
-      console.error('שגיאה בעדכון הפרופיל:', error);
+      console.error('Registration error:', error);
       throw error;
     }
+  };
+
+  const login = async (credentials) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(credentials)
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
   };
 
   const value = {
     user,
     loading,
     error,
-    login,
     register,
+    login,
     logout,
-    updateProfile,
-    checkAuth
+    setError
   };
+
+  if (error) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <h2>אופס! משהו השתבש</h2>
+        <p>{error}</p>
+        <button 
+          onClick={() => {
+            setError(null);
+            logout();
+          }}
+          style={{
+            padding: '10px 20px',
+            marginTop: '20px',
+            backgroundColor: '#1976d2',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          חזור לדף הבית
+        </button>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
