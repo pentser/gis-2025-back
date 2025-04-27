@@ -17,17 +17,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      // בדיקת תקינות הטוקן
-      verifyToken();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const verifyToken = async () => {
+  // פונקציה לבדיקת תקינות הטוקן
+  const validateToken = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
       setUser(null);
@@ -36,30 +27,37 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch('/api/auth/validate', {
+      const response = await fetch(`${API_URL}/api/auth/validate`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        throw new Error('Token validation failed');
+        throw new Error('Token invalid');
       }
 
-      const data = await response.json();
-      setUser(data.user);
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
     } catch (error) {
-      console.error('Token verification error:', error);
+      console.error('Token validation error:', error);
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    validateToken();
+  }, []);
+
   const register = async (userData) => {
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -74,6 +72,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
       return data;
     } catch (error) {
@@ -84,7 +83,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -95,20 +94,23 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.message || 'התחברות נכשלה');
       }
 
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
-      return true;
+      
+      return data;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('שגיאת התחברות:', error);
       throw error;
     }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 
@@ -119,7 +121,8 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
-    setError
+    setError,
+    validateToken
   };
 
   if (error) {
@@ -158,7 +161,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

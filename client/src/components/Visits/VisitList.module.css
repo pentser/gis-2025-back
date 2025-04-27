@@ -112,4 +112,92 @@
     gap: 16px;
     align-items: stretch;
   }
+}
+
+.paper {
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.searchField {
+  flex: 1;
+  min-width: 200px;
+}
+
+.statusFilter {
+  min-width: 200px !important;
+}
+
+.dateInput {
+  min-width: 200px;
+}
+
+.statusSelect {
+  min-width: 200px;
+}
+
+.searchInput {
+  min-width: 250px;
+}
+
+.addButton {
+  margin-bottom: 16px !important;
+}
+
+.actionButton {
+  min-width: 120px;
+}
+
+/* עיצוב לטבלה */
+.MuiTableCell-root {
+  text-align: right;
+  padding: 16px;
+}
+
+.MuiTableRow-hover:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.notesHeader {
+  width: 200px; /* רוחב קבוע לעמודת ההערות */
+}
+
+.notesCell {
+  max-width: 200px;
+  padding: 8px 16px;
+}
+
+.notesContent {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* הוספת טולטיפ בהובר */
+.notesContent:hover {
+  white-space: normal;
+  overflow: visible;
+  position: absolute;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  padding: 8px;
+  border-radius: 4px;
+  z-index: 1000;
+  width: 500px;
+  word-wrap: break-word;
+}
+
+.statusCell {
+  min-width: 150px !important;
+  padding: 8px 16px !important;
 } 

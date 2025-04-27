@@ -14,6 +14,7 @@ import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import { useAuth } from '../../context/AuthContext';
 import styles from './Layout.module.css';
 import { Divider } from '@mui/material';
+import GroupIcon from '@mui/icons-material/Group';
 
 const Sidebar = ({ open, onClose }) => {
   const { user } = useAuth();
@@ -30,7 +31,8 @@ const Sidebar = ({ open, onClose }) => {
     menuItems.push(
       { text: 'לוח בקרה', icon: <DashboardIcon />, path: '/app/dashboard' },
       { text: 'קשישים', icon: <PeopleIcon />, path: '/app/elderly' },
-      { text: 'ביקורים', icon: <AssignmentIcon />, path: '/app/visits' }
+      { text: 'ביקורים', icon: <AssignmentIcon />, path: '/app/visits' },
+      { text: 'מתנדבים', icon: <GroupIcon />, path: '/app/adminvolunteers' }
     );
   } else if (user?.role === 'volunteer') {
     menuItems.push(

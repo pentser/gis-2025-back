@@ -33,8 +33,8 @@ const VisitForm = () => {
   const dateTime = queryParams.get('dateTime');
 
   const [formData, setFormData] = useState({
-    elder: elderId || '',
-    volunteer: user?._id || '',
+    elder: '',
+    volunteer: '',
     date: dateTime ? new Date(dateTime) : new Date(),
     duration: 30,
     notes: '',
@@ -43,7 +43,7 @@ const VisitForm = () => {
 
   const [elderly, setElderly] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [selectedElderly, setSelectedElderly] = useState(null);
@@ -54,33 +54,59 @@ const VisitForm = () => {
         setLoading(true);
         setError(null);
 
+        // טעינת רשימת המתנדבים
+        const fetchVolunteers = async () => {
+          try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            
+            // שליפת המתנדבים מהנתיב הנכון
+            const response = await fetch('http://localhost:5000/api/volunteers', {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch volunteers');
+            }
+
+            const data = await response.json();
+            console.log('Volunteers data:', data);
+
+            const formattedVolunteers = data.map(user => ({
+              _id: user._id,
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
+              name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+            }));
+
+            setVolunteers(formattedVolunteers);
+            setError(null);
+          } catch (err) {
+            console.error('Error fetching volunteers:', err);
+            setError('שגיאה בטעינת רשימת המתנדבים');
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        fetchVolunteers();
+
         // טעינת רשימת הקשישים
         const elderlyData = await fetchElderly();
-        
-        // סינון כפילויות לפי ID
-        const uniqueElderly = elderlyData.reduce((acc, current) => {
-          const x = acc.find(item => item._id === current._id);
-          if (!x) {
-            return acc.concat([current]);
-          } else {
-            return acc;
-          }
-        }, []);
-
-        // מיון לפי שם פרטי ושם משפחה
-        uniqueElderly.sort((a, b) => {
-          const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
-          const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-
-        setElderly(uniqueElderly);
+        setElderly(elderlyData);
 
         // אם יש elderId, מצא את הקשיש המתאים
         if (elderId) {
-          const found = uniqueElderly.find(e => e._id === elderId);
+          const found = elderlyData.find(e => e._id === elderId);
           if (found) {
             setSelectedElderly(found);
+            setFormData(prev => ({
+              ...prev,
+              elder: elderId
+            }));
           }
         }
 
@@ -88,14 +114,15 @@ const VisitForm = () => {
         if (id) {
           const visitData = await fetchVisitById(id);
           setFormData({
-            elder: visitData.elder,
-            volunteer: visitData.volunteer,
+            elder: visitData.elder._id,
+            volunteer: visitData.volunteer.name,
             date: new Date(visitData.date),
             duration: visitData.duration,
             notes: visitData.notes,
             status: visitData.status
           });
-          const elderlyFound = uniqueElderly.find(e => e._id === visitData.elder);
+          
+          const elderlyFound = elderlyData.find(e => e._id === visitData.elder._id);
           if (elderlyFound) {
             setSelectedElderly(elderlyFound);
           }
@@ -109,39 +136,33 @@ const VisitForm = () => {
     };
 
     loadData();
-  }, [id, elderId]);
+  }, [id, elderId, user?.role]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true);
-      setError(null);
-
       const visitData = {
         ...formData,
-        elder: selectedElderly._id,
-        date: formData.date.toISOString(),
-        duration: parseInt(formData.duration),
-        volunteer: user.role === 'volunteer' ? user._id : formData.volunteer
+        volunteer: formData.volunteer,
+        elder: formData.elder,
+        date: formData.date,
+        duration: formData.duration,
+        notes: formData.notes,
+        status: formData.status
       };
-
-      console.log('שולח נתוני ביקור:', visitData);
 
       if (id) {
         await updateVisit(id, visitData);
       } else {
         await createVisit(visitData);
       }
-
+      
       setSuccess(true);
       setTimeout(() => {
-        navigate('/app/myvisits');
-      }, 1500);
+        navigate('/app/visits');
+      }, 2000);
     } catch (err) {
-      console.error('שגיאה בשמירת ביקור:', err);
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -167,7 +188,7 @@ const VisitForm = () => {
     <Container className={styles.container}>
       <Paper className={styles.paper}>
         <Typography variant="h5" component="h1" gutterBottom>
-          {id ? 'עדכון ביקור' : 'דיווח/עדכון ביקור'}
+          {id ? 'עדכון ביקור' : 'דיווח ביקור'}
         </Typography>
 
         {error && (
@@ -178,51 +199,34 @@ const VisitForm = () => {
 
         {success && (
           <Alert severity="success" className={styles.alert}>
-            הביקור נשמר בהצלחה
+            הביקור נשמר בהצלחה!
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className={styles.form}>
           <Grid container spacing={3}>
-            {user && user.role === 'admin' && (
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>מתנדב</InputLabel>
-                  <Select
-                    name="volunteer"
-                    value={formData.volunteer}
-                    onChange={handleChange}
-                    required
-                  >
-                    {volunteers.map((volunteer) => (
-                      <MenuItem key={volunteer._id} value={volunteer._id}>
-                        {volunteer.firstName} {volunteer.lastName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            )}
-
             <Grid item xs={12}>
               <Autocomplete
-                options={elderly}
-                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
                 value={selectedElderly}
                 onChange={(event, newValue) => {
                   setSelectedElderly(newValue);
+                  setFormData(prev => ({
+                    ...prev,
+                    elder: newValue?._id || ''
+                  }));
                 }}
+                options={elderly}
+                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="קשיש"
                     required
+                    label="קשיש"
                     InputLabelProps={{
                       sx: { backgroundColor: 'white', px: 1 }
                     }}
                   />
                 )}
-                isOptionEqualToValue={(option, value) => option._id === value?._id}
               />
             </Grid>
 
@@ -237,32 +241,30 @@ const VisitForm = () => {
                       date: newValue
                     }));
                   }}
-                  slots={{
-                    textField: (params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        required
-                        InputLabelProps={{
-                          sx: { backgroundColor: 'white', px: 1 }
-                        }}
-                      />
-                    )
-                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      required
+                      fullWidth
+                      InputLabelProps={{
+                        sx: { backgroundColor: 'white', px: 1 }
+                      }}
+                    />
+                  )}
                 />
               </LocalizationProvider>
             </Grid>
 
             <Grid item xs={12}>
               <TextField
-                fullWidth
-                label="משך (בדקות)"
                 name="duration"
+                label="משך (בדקות)"
                 type="number"
                 value={formData.duration}
-                onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                onChange={handleChange}
                 required
-                inputProps={{ min: 1 }}
+                fullWidth
+                InputProps={{ inputProps: { min: 1 } }}
                 InputLabelProps={{
                   sx: { backgroundColor: 'white', px: 1 }
                 }}
@@ -275,7 +277,7 @@ const VisitForm = () => {
                 <Select
                   name="status"
                   value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                  onChange={handleChange}
                   required
                 >
                   <MenuItem value="scheduled">מתוכנן</MenuItem>
@@ -292,10 +294,8 @@ const VisitForm = () => {
                 multiline
                 rows={4}
                 value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                onChange={handleChange}
                 fullWidth
-                inputProps={{ maxLength: 500 }}
-                helperText={`${formData.notes.length}/500`}
                 InputLabelProps={{
                   sx: { backgroundColor: 'white', px: 1 }
                 }}
@@ -310,12 +310,12 @@ const VisitForm = () => {
                   color="primary"
                   disabled={loading}
                 >
-                  עדכן ביקור
+                  {id ? 'עדכן ביקור' : 'צור ביקור'}
                 </Button>
                 <Button
                   type="button"
                   variant="outlined"
-                  onClick={() => navigate('/app/myvisits')}
+                  onClick={() => navigate(-1)}
                   disabled={loading}
                 >
                   ביטול

@@ -1,0 +1,12 @@
+.paper {
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.searchField {
+  margin-bottom: 24px;
+}
+
+.actionButton {
+  min-width: 120px;
+} 

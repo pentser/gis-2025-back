@@ -27,6 +27,7 @@ import { useAuth } from './context/AuthContext';
 import VolunteerVisits from './components/volunteer/VolunteerVisits';
 import PrivateRoute from './components/Auth/PrivateRoute';
 import ElderlyPage from './pages/ElderlyPage';
+import AdminVolunteers from './components/Admin/AdminVolunteers';
 
 // יצירת ערכת נושא מותאמת
 const theme = createTheme({
@@ -76,6 +77,8 @@ const cacheRtl = createCache({
 });
 
 const App = () => {
+  const { user } = useAuth();
+
   return (
     <CacheProvider value={cacheRtl}>
       <ThemeProvider theme={theme}>
@@ -93,7 +96,6 @@ const App = () => {
                 <Route index element={<Navigate to="map" replace />} />
                 <Route path="map" element={<MapView />} />
                 <Route path="myvisits" element={<VolunteerVisits />} />
-                <Route path="profile" element={<Profile />} />
                 <Route path="visits" element={<VisitList />} />
                 <Route path="visits/new" element={<VisitForm />} />
                 <Route path="visits/edit/:id" element={<VisitForm />} />
@@ -102,6 +104,9 @@ const App = () => {
                 <Route path="elderly/edit/:id" element={<ElderlyForm />} />
                 <Route path="elderly/:id" element={<ElderlyPage />} />
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="adminvolunteers" element={<AdminVolunteers />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
               </Route>
 
               {/* ניתוב ברירת מחדל */}

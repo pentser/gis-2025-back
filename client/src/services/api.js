@@ -3,37 +3,49 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 // פונקציית עזר להוספת headers
 const getHeaders = () => {
   const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('נדרשת התחברות מחדש');
+  }
   return {
     'Content-Type': 'application/json',
-    'Authorization': token ? `Bearer ${token}` : '',
+    'Authorization': `Bearer ${token}`,
   };
 };
 
 // פונקציית עזר לביצוע בקשות
 export const fetchWithAuth = async (endpoint, options = {}) => {
-  const headers = getHeaders();
-  console.log('שולח בקשה לנקודת קצה:', endpoint);
-  console.log('headers:', headers);
+  try {
+    const headers = getHeaders();
+    console.log(`Fetching ${endpoint}...`);
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...headers,
-      ...options.headers,
-    },
-  });
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options.headers,
+      }
+    });
 
-  console.log('סטטוס התשובה:', response.status);
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'שגיאת שרת' }));
-    console.error('שגיאה בבקשה:', error);
-    throw new Error(error.message || 'שגיאת שרת');
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      throw new Error('נדרשת התחברות מחדש');
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error(`Error fetching ${endpoint}:`, errorData);
+      throw new Error(errorData.message || 'שגיאת שרת');
+    }
+
+    const data = await response.json();
+    console.log(`${endpoint} response:`, data);
+    return data;
+  } catch (error) {
+    console.error(`Error in fetchWithAuth (${endpoint}):`, error);
+    throw error;
   }
-
-  const data = await response.json();
-  console.log('התקבלו נתונים מהשרת:', data);
-  return data;
 };
 
 export const fetchVisits = () => fetchWithAuth('/api/visits');
@@ -213,6 +225,40 @@ export const fetchVolunteerVisits = async () => {
     return validVisits;
   } catch (error) {
     console.error('שגיאה בקבלת ביקורים:', error);
+    throw error;
+  }
+};
+
+// פונקציה חדשה לשליפת מתנדבים עבור מנהל
+export const fetchAdminVolunteers = () => fetchWithAuth('/api/admin/volunteers');
+
+// פונקציה חדשה לשליפת נתוני מפת האדמין
+export const fetchAdminMapData = () => fetchWithAuth('/api/admin/map');
+
+export const fetchAdminDashboard = () => fetchWithAuth('/api/admin/dashboard');
+
+export const fetchAdminMap = async () => {
+  try {
+    console.log('Fetching admin map data...');
+    const data = await fetchWithAuth('/api/admin/map');
+    console.log('Admin map data received:', data);
+    
+    // וידוא שהנתונים בפורמט הנכון
+    if (!data || (!data.elderly && !data.mapData?.elderly)) {
+      console.error('Invalid data format received:', data);
+      throw new Error('התקבלו נתונים לא תקינים מהשרת');
+    }
+
+    // המרת הנתונים לפורמט אחיד
+    const formattedData = {
+      elderly: data.elderly || data.mapData?.elderly || [],
+      volunteers: data.volunteers || data.mapData?.volunteers || []
+    };
+
+    console.log('Formatted map data:', formattedData);
+    return formattedData;
+  } catch (error) {
+    console.error('Error fetching admin map data:', error);
     throw error;
   }
 }; 
