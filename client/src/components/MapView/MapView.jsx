@@ -275,10 +275,10 @@ const normalizeCoordinates = (location) => {
   return null;
 };
 
-const MapView = ({ data }) => {
+const MapView = () => {
   const { user } = useAuth();
   const [mapData, setMapData] = useState({ elderly: [], volunteers: [] });
-  const [center, setCenter] = useState([31.7767, 35.2345]); // ברירת מחדל: ירושלים
+  const [center, setCenter] = useState([31.7767, 35.2345]);
   const [radius, setRadius] = useState(10);
   const [filters, setFilters] = useState({
     showElderly: true,
@@ -286,7 +286,7 @@ const MapView = ({ data }) => {
     urgencyLevel: 'all',
     searchQuery: ''
   });
-  
+
   // פונקציה לטעינת נתוני המפה
   const loadMapData = async (userLocation) => {
     try {
@@ -302,7 +302,30 @@ const MapView = ({ data }) => {
         return;
       }
 
-      setMapData(data);
+      // וידוא ונירמול הנתונים
+      const normalizedData = {
+        elderly: (data.elderly || []).map(elder => ({
+          _id: elder._id || String(Math.random()),
+          firstName: elder.firstName || '',
+          lastName: elder.lastName || '',
+          address: elder.address || '',
+          phone: elder.phone || '',
+          urgency: elder.urgency || 'medium',
+          lastVisit: elder.lastVisit || null,
+          location: elder.location || null
+        })),
+        volunteers: (data.volunteers || []).map(volunteer => ({
+          _id: volunteer._id || String(Math.random()),
+          firstName: volunteer.firstName || '',
+          lastName: volunteer.lastName || '',
+          address: volunteer.address || '',
+          phone: volunteer.phone || '',
+          availability: volunteer.availability || '',
+          location: volunteer.location || null
+        }))
+      };
+
+      setMapData(normalizedData);
     } catch (error) {
       console.error('Error loading map data:', error);
       alert('שגיאה בטעינת נתוני המפה');
@@ -324,22 +347,18 @@ const MapView = ({ data }) => {
 
   // סינון וחישוב הנקודות למפה
   const points = useMemo(() => {
-    console.log('Calculating map points with filters:', filters);
-    
     const result = {
       elderly: [],
       volunteers: []
     };
 
-    if (filters.showElderly && mapData.elderly) {
+    if (filters.showElderly && Array.isArray(mapData.elderly)) {
       result.elderly = mapData.elderly
         .filter(filterBySearch)
         .map(elder => {
+          if (!elder) return null;
           const coords = normalizeCoordinates(elder.location);
-          if (!coords) {
-            console.warn('Invalid elderly coordinates:', elder);
-            return null;
-          }
+          if (!coords) return null;
           return { ...elder, coordinates: coords };
         })
         .filter(elder => {
@@ -349,24 +368,46 @@ const MapView = ({ data }) => {
         });
     }
 
-    if (filters.showVolunteers && mapData.volunteers) {
+    if (filters.showVolunteers && Array.isArray(mapData.volunteers)) {
       result.volunteers = mapData.volunteers
         .filter(filterBySearch)
         .map(volunteer => {
+          if (!volunteer) return null;
           const coords = normalizeCoordinates(volunteer.location);
-          if (!coords) {
-            console.warn('Invalid volunteer coordinates:', volunteer);
-            return null;
-          }
+          if (!coords) return null;
           return { ...volunteer, coordinates: coords };
         })
         .filter(Boolean);
     }
 
     return result;
-  }, [mapData, filters]);
+  }, [mapData, filters, filterBySearch]);
 
-  if (!data) {
+  // פונקציה להצגת תאריך בפורמט עברי
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      return new Date(dateString).toLocaleDateString('he-IL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return '';
+    }
+  };
+
+  // פונקציה להצגת דחיפות בעברית
+  const getUrgencyText = (urgency) => {
+    switch (urgency) {
+      case 'high': return 'גבוהה';
+      case 'medium': return 'בינונית';
+      case 'low': return 'נמוכה';
+      default: return 'לא ידוע';
+    }
+  };
+
+  if (!mapData) {
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -401,40 +442,37 @@ const MapView = ({ data }) => {
           />
           <MapUpdater center={center} />
           
-          {points.elderly.map((elder, index) => (
+          {points.elderly.map((elder) => (
             <Marker
-              key={`elderly-${elder._id || index}`}
+              key={elder._id}
               position={elder.coordinates}
               icon={createElderlyIcon(elder.urgency)}
             >
               <Popup>
                 <div className="popup-content">
                   <h3>{elder.firstName} {elder.lastName}</h3>
-                  <p><strong>כתובת:</strong> {elder.address}</p>
-                  <p><strong>טלפון:</strong> {elder.phone}</p>
-                  <p><strong>דחיפות:</strong> {
-                    elder.urgency === 'high' ? 'גבוהה' :
-                    elder.urgency === 'medium' ? 'בינונית' : 'נמוכה'
-                  }</p>
+                  {elder.address && <p><strong>כתובת:</strong> {elder.address}</p>}
+                  {elder.phone && <p><strong>טלפון:</strong> {elder.phone}</p>}
+                  <p><strong>דחיפות:</strong> {getUrgencyText(elder.urgency)}</p>
                   {elder.lastVisit && (
-                    <p><strong>ביקור אחרון:</strong> {new Date(elder.lastVisit).toLocaleDateString('he-IL')}</p>
+                    <p><strong>ביקור אחרון:</strong> {formatDate(elder.lastVisit)}</p>
                   )}
                 </div>
               </Popup>
             </Marker>
           ))}
           
-          {points.volunteers.map((volunteer, index) => (
+          {points.volunteers.map((volunteer) => (
             <Marker
-              key={`volunteer-${volunteer._id || index}`}
+              key={volunteer._id}
               position={volunteer.coordinates}
               icon={createVolunteerIcon()}
             >
               <Popup>
                 <div className="popup-content">
                   <h3>{volunteer.firstName} {volunteer.lastName}</h3>
-                  <p><strong>כתובת:</strong> {volunteer.address}</p>
-                  <p><strong>טלפון:</strong> {volunteer.phone}</p>
+                  {volunteer.address && <p><strong>כתובת:</strong> {volunteer.address}</p>}
+                  {volunteer.phone && <p><strong>טלפון:</strong> {volunteer.phone}</p>}
                   {volunteer.availability && (
                     <p><strong>זמינות:</strong> {volunteer.availability}</p>
                   )}
