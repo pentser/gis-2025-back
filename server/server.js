@@ -8,6 +8,7 @@ import visitsRoutes from './routes/visits.routes.js';
 import elderlyRoutes from './routes/elderly.routes.js';
 import volunteerRoutes from './routes/volunteer.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import healthRoutes from './routes/health.routes.js';
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.use('/api/visits', visitsRoutes);
 app.use('/api/elderly', elderlyRoutes);
 app.use('/api/volunteers', volunteerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', healthRoutes);
 
 // חיבור למסד הנתונים
 mongoose.connect(process.env.MONGODB_URI)
