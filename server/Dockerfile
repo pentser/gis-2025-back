@@ -11,4 +11,4 @@ COPY . .
 EXPOSE 5000
 
 # הגדרת הפקודה להפעלת השרת
-CMD ["node", "server.js"]
+CMD ["npm", "start"]

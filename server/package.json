@@ -10,7 +10,9 @@
     "seed": "node scripts/seedData.js",
     "seed-visits": "node scripts/seedVisits.js",
     "init-db": "node scripts/initDb.js",
-    "fix-locations": "node scripts/fixLocations.js"
+    "fix-locations": "node scripts/fixLocations.js",
+    "postinstall": "npm run build",
+    "build": "echo 'No build step required'"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -24,5 +26,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

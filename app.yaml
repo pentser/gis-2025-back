@@ -9,7 +9,7 @@ services:
   http_port: 5000
   instance_count: 1
   instance_size_slug: basic-xxs
-  run_command: node server.js
+  run_command: npm start
   health_check_path: /api/health
   health_check_interval: 30s
   envs:
