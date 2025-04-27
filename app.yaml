@@ -2,11 +2,11 @@ name: gis-2025
 services:
   - name: client
     github:
-      branch: eli_final_project
+      branch: main
       deploy_on_push: true
       repo: your-username/gis-2025
     build_command: cd client && npm install && npm run build
-    run_command: cd client && npm run preview
+    run_command: cd client && npm run preview -- --host 0.0.0.0 --port 80
     http_port: 80
     instance_count: 1
     instance_size_slug: basic-xxs
@@ -20,11 +20,11 @@ services:
 
   - name: server
     github:
-      branch: eli_final_project
+      branch: main
       deploy_on_push: true
       repo: your-username/gis-2025
     build_command: cd server && npm install
-    run_command: cd server && npm start
+    run_command: cd server && node server.js
     http_port: 5000
     instance_count: 1
     instance_size_slug: basic-xxs
@@ -39,6 +39,8 @@ services:
         value: production
       - key: PORT
         value: "5000"
+      - key: CLIENT_URL
+        value: ${client.URL}
 
 databases:
   - engine: MONGODB
