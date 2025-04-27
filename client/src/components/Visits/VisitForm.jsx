@@ -199,39 +199,34 @@ const VisitForm = () => {
 
         {success && (
           <Alert severity="success" className={styles.alert}>
-            הביקור נשמר בהצלחה
+            הביקור נשמר בהצלחה!
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className={styles.form}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Autocomplete
-                options={volunteers}
-                getOptionLabel={(option) => option.name || `${option.firstName} ${option.lastName}`.trim()}
-                value={volunteers.find(v => v._id === formData.volunteer) || null}
+                value={selectedElderly}
                 onChange={(event, newValue) => {
+                  setSelectedElderly(newValue);
                   setFormData(prev => ({
                     ...prev,
-                    volunteer: newValue?._id || ''
+                    elder: newValue?._id || ''
                   }));
                 }}
+                options={elderly}
+                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="מתנדב"
                     required
-                    error={!!error && !formData.volunteer}
-                    helperText={error && !formData.volunteer ? 'יש לבחור מתנדב' : ''}
+                    label="קשיש"
                     InputLabelProps={{
                       sx: { backgroundColor: 'white', px: 1 }
                     }}
                   />
                 )}
-                loading={loading}
-                loadingText="טוען מתנדבים..."
-                noOptionsText="לא נמצאו מתנדבים"
-                isOptionEqualToValue={(option, value) => option._id === value._id}
               />
             </Grid>
 
@@ -246,32 +241,30 @@ const VisitForm = () => {
                       date: newValue
                     }));
                   }}
-                  slots={{
-                    textField: (params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        required
-                        InputLabelProps={{
-                          sx: { backgroundColor: 'white', px: 1 }
-                        }}
-                      />
-                    )
-                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      required
+                      fullWidth
+                      InputLabelProps={{
+                        sx: { backgroundColor: 'white', px: 1 }
+                      }}
+                    />
+                  )}
                 />
               </LocalizationProvider>
             </Grid>
 
             <Grid item xs={12}>
               <TextField
-                fullWidth
-                label="משך (בדקות)"
                 name="duration"
+                label="משך (בדקות)"
                 type="number"
                 value={formData.duration}
-                onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                onChange={handleChange}
                 required
-                inputProps={{ min: 1 }}
+                fullWidth
+                InputProps={{ inputProps: { min: 1 } }}
                 InputLabelProps={{
                   sx: { backgroundColor: 'white', px: 1 }
                 }}
@@ -284,7 +277,7 @@ const VisitForm = () => {
                 <Select
                   name="status"
                   value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                  onChange={handleChange}
                   required
                 >
                   <MenuItem value="scheduled">מתוכנן</MenuItem>
@@ -301,10 +294,8 @@ const VisitForm = () => {
                 multiline
                 rows={4}
                 value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                onChange={handleChange}
                 fullWidth
-                inputProps={{ maxLength: 500 }}
-                helperText={`${formData.notes.length}/500`}
                 InputLabelProps={{
                   sx: { backgroundColor: 'white', px: 1 }
                 }}
@@ -319,12 +310,12 @@ const VisitForm = () => {
                   color="primary"
                   disabled={loading}
                 >
-                  עדכן ביקור
+                  {id ? 'עדכן ביקור' : 'צור ביקור'}
                 </Button>
                 <Button
                   type="button"
                   variant="outlined"
-                  onClick={() => navigate('/app/myvisits')}
+                  onClick={() => navigate(-1)}
                   disabled={loading}
                 >
                   ביטול

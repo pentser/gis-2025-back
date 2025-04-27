@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -12,7 +12,10 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { fetchVisitStats, fetchUrgentVisits } from '../../services/api';
+import { 
+  fetchAdminDashboard, 
+  fetchAdminMap 
+} from '../../services/api';
 import MapView from '../MapView/MapView';
 import styles from './Dashboard.module.css';
 import { useNavigate } from 'react-router-dom';
@@ -21,60 +24,82 @@ import HistoryIcon from '@mui/icons-material/History';
 import GroupIcon from '@mui/icons-material/Group';
 import Box from '@mui/material/Box';
 import { useAuth } from '../../context/AuthContext';
+import CircularProgress from '@mui/material/CircularProgress';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState(null);
-  const [urgentVisits, setUrgentVisits] = useState([]);
+  const [dashboardData, setDashboardData] = useState({
+    stats: {
+      totalVisits: 0,
+      activeElderly: 0,
+      visitsThisWeek: 0,
+      activeVolunteers: 0
+    },
+    mapData: {
+      elderly: [],
+      volunteers: []
+    },
+    urgentVisits: []
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // בדיקת הרשאות
-    if (!user || user.role !== 'admin') {
-      navigate('/login');
-      return;
-    }
-
-    loadDashboardData();
-  }, [user, navigate]);
-
-  const loadDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const [statsData, urgentData] = await Promise.all([
-        fetchVisitStats(),
-        fetchUrgentVisits()
+
+      const [dashboardResponse, mapResponse] = await Promise.all([
+        fetchAdminDashboard(),
+        fetchAdminMap()
       ]);
-      
-      setStats(statsData);
-      setUrgentVisits(urgentData);
+
+      console.log('Dashboard Response:', dashboardResponse);
+      console.log('Map Response:', mapResponse);
+
+      // עיבוד נתוני המפה
+      const processedMapData = {
+        elderly: mapResponse.elderly.map(elder => ({
+          ...elder,
+          location: elder.location?.coordinates 
+            ? [elder.location.coordinates[1], elder.location.coordinates[0]]
+            : null
+        })).filter(elder => elder.location),
+        volunteers: mapResponse.volunteers.map(volunteer => ({
+          ...volunteer,
+          location: volunteer.location?.coordinates 
+            ? [volunteer.location.coordinates[1], volunteer.location.coordinates[0]]
+            : null
+        })).filter(volunteer => volunteer.location)
+      };
+
+      console.log('Processed Map Data:', processedMapData);
+
+      setDashboardData({
+        ...dashboardResponse,
+        mapData: processedMapData
+      });
     } catch (err) {
-      console.error('שגיאה בטעינת נתוני הדשבורד:', err);
+      console.error('שגיאה בטעינת נתונים:', err);
       setError(err.message);
-      
       if (err.message.includes('התחברות מחדש')) {
         navigate('/login');
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
-  const handleNavigate = (path) => {
-    try {
-      console.log('מנווט לנתיב:', path);
-      navigate(path);
-    } catch (error) {
-      console.error('שגיאת ניווט:', error);
-      setError('שגיאה בניווט לדף המבוקש');
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      navigate('/login');
+      return;
     }
-  };
 
-  // כפתורי ניווט חדשים
+    fetchDashboardData();
+  }, [user, navigate, fetchDashboardData]);
+
   const navigationButtons = [
     {
       title: 'ביקורים',
@@ -97,16 +122,43 @@ const Dashboard = () => {
   ];
 
   if (loading) {
-    return <div className={styles.loading}>טוען...</div>;
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <CircularProgress />
+        <Typography>טוען נתונים...</Typography>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className={styles.error}>{error}</div>;
+    return (
+      <div style={{ 
+        padding: '2rem', 
+        textAlign: 'center',
+        color: 'red' 
+      }}>
+        <Typography variant="h6">{error}</Typography>
+        <Button 
+          variant="contained" 
+          color="primary"
+          onClick={fetchDashboardData}
+          sx={{ mt: 2 }}
+        >
+          נסה שוב
+        </Button>
+      </div>
+    );
   }
 
   return (
     <div className={styles.dashboard}>
-      {/* כפתורי ניווט */}
       <Box sx={{ mb: 4 }}>
         <Grid container spacing={3}>
           {navigationButtons.map((button) => (
@@ -120,7 +172,7 @@ const Dashboard = () => {
                     transform: 'scale(1.02)'
                   }
                 }}
-                onClick={() => handleNavigate(button.path)}
+                onClick={() => navigate(button.path)}
               >
                 <CardContent sx={{
                   display: 'flex',
@@ -150,63 +202,51 @@ const Dashboard = () => {
             variant="contained" 
             color="primary" 
             startIcon={<RefreshIcon />}
-            onClick={loadDashboardData}
+            onClick={fetchDashboardData}
             className={styles.refreshButton}
           >
             רענון נתונים
           </Button>
         </Grid>
 
-        {/* Stats Cards Row */}
         <Grid item xs={12}>
-          <Grid container spacing={2} className={styles.statsRow}>
+          <Grid container spacing={2}>
             <Grid item xs={6} sm={3}>
-              <Card className={styles.miniStatsCard}>
+              <Card>
                 <CardContent>
-                  <Typography variant="subtitle2" component="h3">
-                    סה"כ ביקורים
-                  </Typography>
-                  <Typography variant="h6" component="p">
-                    {stats?.totalVisits || 0}
+                  <Typography variant="subtitle2">סה"כ ביקורים</Typography>
+                  <Typography variant="h6">
+                    {dashboardData.stats.totalVisits}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
-
             <Grid item xs={6} sm={3}>
-              <Card className={styles.miniStatsCard}>
+              <Card>
                 <CardContent>
-                  <Typography variant="subtitle2" component="h3">
-                    קשישים פעילים
-                  </Typography>
-                  <Typography variant="h6" component="p">
-                    {stats?.uniqueEldersCount || 0}
+                  <Typography variant="subtitle2">קשישים פעילים</Typography>
+                  <Typography variant="h6">
+                    {dashboardData.stats.activeElderly}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
-
             <Grid item xs={6} sm={3}>
-              <Card className={styles.miniStatsCard}>
+              <Card>
                 <CardContent>
-                  <Typography variant="subtitle2" component="h3">
-                    ממוצע משך ביקור
-                  </Typography>
-                  <Typography variant="h6" component="p">
-                    {stats?.averageVisitLength ? `${Math.round(stats.averageVisitLength)} דק'` : '-'}
+                  <Typography variant="subtitle2">מתנדבים פעילים</Typography>
+                  <Typography variant="h6">
+                    {dashboardData.stats.activeVolunteers}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
-
             <Grid item xs={6} sm={3}>
-              <Card className={styles.miniStatsCard}>
+              <Card>
                 <CardContent>
-                  <Typography variant="subtitle2" component="h3">
-                    ביקורים השבוע
-                  </Typography>
-                  <Typography variant="h6" component="p">
-                    {stats?.visitsThisWeek || 0}
+                  <Typography variant="subtitle2">ביקורים השבוע</Typography>
+                  <Typography variant="h6">
+                    {dashboardData.stats.visitsThisWeek}
                   </Typography>
                 </CardContent>
               </Card>
@@ -214,11 +254,24 @@ const Dashboard = () => {
           </Grid>
         </Grid>
 
-        {/* Map Section */}
-        <Grid item xs={12}>
-          <Card className={styles.mapCard}>
+        <Grid item xs={12} md={8}>
+          <Card>
             <CardContent>
-              <MapView />
+              <Typography variant="h6" gutterBottom>
+                מפת מתנדבים וקשישים
+              </Typography>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : error ? (
+                <Typography color="error">{error}</Typography>
+              ) : (
+                <MapView 
+                  data={dashboardData} 
+                  isAdminView={true}
+                />
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -239,7 +292,7 @@ const Dashboard = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {urgentVisits.map((visit) => (
+                  {dashboardData.urgentVisits.map((visit) => (
                     <TableRow key={visit.elder._id} className={styles.urgentRow}>
                       <TableCell>
                         {visit.elder.firstName} {visit.elder.lastName}

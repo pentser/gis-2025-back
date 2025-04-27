@@ -16,20 +16,16 @@ const getHeaders = () => {
 export const fetchWithAuth = async (endpoint, options = {}) => {
   try {
     const headers = getHeaders();
-    console.log('שולח בקשה לנקודת קצה:', endpoint);
-    console.log('headers:', headers);
+    console.log(`Fetching ${endpoint}...`);
 
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers: {
         ...headers,
         ...options.headers,
-      },
-      credentials: 'include',
+      }
     });
 
-    console.log('סטטוס התשובה:', response.status);
-    
     if (response.status === 401 || response.status === 403) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -38,16 +34,16 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
     }
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('שגיאה בבקשה:', error);
-      throw new Error(error.message || 'שגיאת שרת');
+      const errorData = await response.json();
+      console.error(`Error fetching ${endpoint}:`, errorData);
+      throw new Error(errorData.message || 'שגיאת שרת');
     }
 
     const data = await response.json();
-    console.log('התקבלו נתונים מהשרת:', data);
+    console.log(`${endpoint} response:`, data);
     return data;
   } catch (error) {
-    console.error('שגיאה בביצוע הבקשה:', error);
+    console.error(`Error in fetchWithAuth (${endpoint}):`, error);
     throw error;
   }
 };
@@ -234,4 +230,10 @@ export const fetchVolunteerVisits = async () => {
 };
 
 // פונקציה חדשה לשליפת מתנדבים עבור מנהל
-export const fetchAdminVolunteers = () => fetchWithAuth('/api/admin/volunteers'); 
+export const fetchAdminVolunteers = () => fetchWithAuth('/api/admin/volunteers');
+
+// פונקציה חדשה לשליפת נתוני מפת האדמין
+export const fetchAdminMapData = () => fetchWithAuth('/api/admin/map');
+
+export const fetchAdminDashboard = () => fetchWithAuth('/api/admin/dashboard');
+export const fetchAdminMap = () => fetchWithAuth('/api/admin/map'); 

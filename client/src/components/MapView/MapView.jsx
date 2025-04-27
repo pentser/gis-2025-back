@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
 import { useAuth } from '../../context/AuthContext';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
+import { fetchAdminMapData } from '../../services/api';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 
 // יצירת אייקונים פשוטים לזקנים לפי דחיפות
 const createElderlyIcon = (urgency) => {
@@ -152,11 +156,9 @@ const LocationSelector = ({ userLocation, onLocationChange, useGpsLocation }) =>
 
 // קומפוננטת סטטיסטיקות
 const StatsPanel = ({ mapData }) => {
-  // וידוא שהנתונים קיימים ותקינים
   const elderly = Array.isArray(mapData.elderly) ? mapData.elderly : [];
   const volunteers = Array.isArray(mapData.volunteers) ? mapData.volunteers : [];
   
-  // חישוב סטטיסטיקות בצורה בטוחה
   const stats = {
     totalElderly: elderly.length,
     needVisit: elderly.filter(e => e && e.status === 'needs_visit').length,
@@ -174,7 +176,7 @@ const StatsPanel = ({ mapData }) => {
       <div className="stats-grid">
         <div className="stat-item">
           <span className="stat-value">{stats.totalElderly}</span>
-          <span className="stat-label">זקנים באזור</span>
+          <span className="stat-label">קשישים באזור</span>
         </div>
         <div className="stat-item">
           <span className="stat-value">{stats.needVisit}</span>
@@ -375,517 +377,166 @@ const MapLegend = () => {
   );
 };
 
-// קומפוננטת המפה הראשית
-const MapView = () => {
-  const [mapData, setMapData] = useState({ elderly: [], volunteers: [] });
-  const [filters, setFilters] = useState({
-    radius: 10,
-    elderlyStatus: '',
-    volunteerStatus: '',
-    lastVisitDays: '',
-    searchTerm: '',
-    showRoute: false
-  });
-  const [userLocation, setUserLocation] = useState(null);
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+// מרכז ברירת מחדל - ישראל
+const DEFAULT_CENTER = [31.7683, 35.2137];
+const DEFAULT_ZOOM = 8;
+
+const MapView = ({ data, isAdminView = false }) => {
   const { user } = useAuth();
-
-  // פונקציה לקבלת מיקום מה-GPS
-  const getGpsLocation = () => {
-    setIsLoadingLocation(true);
-    console.log('מנסה לקבל מיקום GPS...');
-    
-    if (!navigator.geolocation) {
-      console.error('דפדפן לא תומך ב-Geolocation API');
-      setUserLocation([32.0853, 34.7818]); // ברירת מחדל - תל אביב
-      setIsLoadingLocation(false);
-      return;
-    }
-    
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        console.log('התקבל מיקום GPS:', lat, lon);
-        setUserLocation([lat, lon]);
-        setIsLoadingLocation(false);
-      },
-      (error) => {
-        console.error('שגיאה בקבלת מיקום GPS:', error.code, error.message);
-        // פירוט קודי השגיאה לצורך ניפוי טוב יותר
-        switch(error.code) {
-          case error.PERMISSION_DENIED:
-            console.error('משתמש דחה בקשת מיקום');
-            break;
-          case error.POSITION_UNAVAILABLE:
-            console.error('מידע מיקום לא זמין');
-            break;
-          case error.TIMEOUT:
-            console.error('פג זמן בקשת המיקום');
-            break;
-          case error.UNKNOWN_ERROR:
-            console.error('שגיאה לא ידועה');
-            break;
-        }
-        
-        // אם יש כבר מיקום, נשאר בו, אחרת נשתמש בברירת המחדל
-        if (!userLocation) {
-          console.log('אין מיקום קיים, משתמש בברירת מחדל - תל אביב');
-          setUserLocation([32.0853, 34.7818]); // ברירת מחדל - תל אביב
-        } else {
-          console.log('נשאר עם המיקום הקיים:', userLocation);
-        }
-        setIsLoadingLocation(false);
-      },
-      { 
-        enableHighAccuracy: true, 
-        timeout: 10000, 
-        maximumAge: 60000 
-      }
-    );
-  };
-
-  // פונקציה להמרת כתובת לקואורדינטות
-  const geocodeAddress = async (address) => {
-    if (!address) return null;
-    
-    try {
-      console.log('מנסה להמיר כתובת:', address);
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}, Israel`
-      );
-      const data = await response.json();
-      
-      if (data && data[0]) {
-        const lat = parseFloat(data[0].lat);
-        const lon = parseFloat(data[0].lon);
-        console.log('התקבלו קואורדינטות:', lat, lon);
-        
-        if (isNaN(lat) || isNaN(lon)) {
-          console.error('קואורדינטות לא תקינות');
-          return null;
-        }
-        
-        return [lat, lon];
-      }
-      console.log('לא נמצאו קואורדינטות לכתובת');
-      return null;
-    } catch (error) {
-      console.error('שגיאה בהמרת כתובת לקואורדינטות:', error);
-      return null;
-    }
-  };
+  const [center, setCenter] = useState([31.7767, 35.2345]); // ברירת מחדל: ירושלים
+  const [radius, setRadius] = useState(10);
   
-  // פונקציה לקבלת מיקום המשתמש מהשרת
-  const getUserLocation = async () => {
-    try {
-      console.log('מנסה לקבל מיקום משתמש מהשרת');
-      // לוודא שיש טוקן
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('אין טוקן, לא ניתן לבקש מיקום מהשרת');
-        return null;
-      }
-
-      const response = await fetch('/api/auth/me', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        console.error(`שגיאת שרת: ${response.status} - ${response.statusText}`);
-        const errorText = await response.text();
-        console.error('תוכן השגיאה:', errorText);
-        throw new Error(`שגיאת שרת: ${response.status}`);
-      }
-      
-      // לוודא שהנתונים בפורמט JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('התגובה אינה בפורמט JSON:', contentType);
-        throw new Error('התגובה אינה בפורמט JSON');
-      }
-
-      const userData = await response.json();
-      console.log('מידע משתמש מהשרת (מלא):', JSON.stringify(userData));
-      
-      // בדיקה מפורטת יותר אם יש מיקום שמור תקין
-      if (userData.location) {
-        console.log('נמצא שדה מיקום במידע המשתמש:', JSON.stringify(userData.location));
-        
-        try {
-          // בדיקה שיש קואורדינטות
-          if (userData.location.coordinates && Array.isArray(userData.location.coordinates) && userData.location.coordinates.length >= 2) {
-            const coordinates = userData.location.coordinates;
-            console.log('קואורדינטות גולמיות מהשרת:', coordinates);
-            
-            // נסה להמיר למספרים אם צריך
-            const lon = parseFloat(coordinates[0]);
-            const lat = parseFloat(coordinates[1]);
-            
-            console.log('אחרי המרה למספרים:', {lon, lat});
-            
-            // וידוא שהערכים הם מספרים תקינים
-            if (!isNaN(lon) && !isNaN(lat) && 
-                lon >= -180 && lon <= 180 && 
-                lat >= -90 && lat <= 90) {
-              
-              // שים לב: ב-GeoJSON הסדר הוא [lon, lat], אבל ב-Leaflet הסדר הוא [lat, lon]
-              console.log('קואורדינטות תקינות מהמסד נתונים, ממיר לפורמט Leaflet:', [lat, lon]);
-              
-              // החזר מיד את המיקום - אל תמשיך לבדוק דברים אחרים
-              return [lat, lon]; // ממיר לפורמט של Leaflet
-            } else {
-              console.error('ערכי קואורדינטות מחוץ לטווח או לא תקינים:', {lon, lat});
-            }
-          } else {
-            console.log('אין קואורדינטות תקינות במיקום, מבנה המיקום:', userData.location);
-          }
-        } catch (locationErr) {
-          console.error('שגיאה בעיבוד מיקום המשתמש:', locationErr);
-        }
-      } else {
-        console.log('אין שדה מיקום במידע המשתמש');
-      }
-      
-      // אם הגענו לכאן, אין קואורדינטות תקינות במיקום
-      
-      // אם אין מיקום שמור אבל יש כתובת, ננסה להמיר אותה
-      if (userData.address) {
-        console.log('מנסה להמיר כתובת המשתמש:', userData.address);
-        const addressCoords = await geocodeAddress(userData.address);
-        if (addressCoords) {
-          console.log('התקבלו קואורדינטות מהכתובת:', addressCoords);
-          return addressCoords;
-        } else {
-          console.log('לא התקבלו קואורדינטות מהכתובת');
-        }
-      } else {
-        console.log('אין כתובת במידע המשתמש');
-      }
-      
-      console.log('לא נמצא מיקום תקין מהשרת, חוזר null');
-      return null;
-    } catch (error) {
-      console.error('שגיאה בקבלת מידע משתמש:', error);
-      return null;
+  // פונקציה לוידוא תקינות קואורדינטות
+  const validateCoordinates = useCallback((location) => {
+    if (!location || !Array.isArray(location) || location.length !== 2) {
+      console.log('Invalid location format:', location);
+      return false;
     }
-  };
+    const [lat, lng] = location;
+    if (isNaN(lat) || isNaN(lng)) {
+      console.log('Invalid coordinates:', lat, lng);
+      return false;
+    }
+    return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  }, []);
 
-  useEffect(() => {
-    // קודם כל, ננסה להשתמש במיקום המשתמש מהשרת או מהכתובת
-    const loadInitialLocation = async () => {
-      setIsLoadingLocation(true);
-      
-      // קודם ננסה לקבל מיקום מהשרת
-      console.log('מתחיל טעינת מיקום התחלתי...');
-      const serverLocation = await getUserLocation();
-      
-      if (serverLocation) {
-        console.log('התקבל מיקום מהשרת/כתובת, משתמש בו:', serverLocation);
-        setUserLocation(serverLocation);
-        setIsLoadingLocation(false);
-        return;
-      }
-      
-      console.log('לא התקבל מיקום מהשרת, בודק כתובת משתמש...');
-      
-      // אם אין מיקום מהשרת ויש כתובת למשתמש, ננסה להמיר אותה
-      if (user && user.address) {
-        try {
-          console.log('מנסה להשתמש בכתובת המשתמש ממצב האפליקציה:', user.address);
-          const coordinates = await geocodeAddress(user.address);
-          
-          if (coordinates) {
-            console.log('התקבלו קואורדינטות מהכתובת:', coordinates);
-            setUserLocation(coordinates);
-            setIsLoadingLocation(false);
-            return;
-          } else {
-            console.log('לא נמצאו קואורדינטות לכתובת המשתמש');
-          }
-        } catch (error) {
-          console.error('שגיאה בהמרת כתובת המשתמש:', error);
-        }
-      } else {
-        console.log('אין כתובת משתמש במצב האפליקציה');
-      }
-      
-      // אם לא הצלחנו לקבל מיקום בדרכים אחרות, ננסה עם GPS
-      console.log('מנסה להשתמש ב-GPS כאפשרות אחרונה');
-      getGpsLocation();
+  // עיבוד הנתונים לפני הצגה
+  const processedData = useMemo(() => {
+    console.log('Processing map data:', data?.mapData);
+    
+    if (!data?.mapData) {
+      console.log('No map data available');
+      return { elderly: [], volunteers: [] };
+    }
+
+    const { elderly = [], volunteers = [] } = data.mapData;
+
+    console.log('Raw elderly data:', elderly);
+    console.log('Raw volunteer data:', volunteers);
+
+    const processed = {
+      elderly: elderly
+        .filter(e => e && e.location)
+        .map(e => ({
+          ...e,
+          location: validateCoordinates(e.location) ? e.location : null
+        }))
+        .filter(e => e.location),
+      volunteers: volunteers
+        .filter(v => v && v.location)
+        .map(v => ({
+          ...v,
+          location: validateCoordinates(v.location) ? v.location : null
+        }))
+        .filter(v => v.location)
     };
 
-    loadInitialLocation();
-  }, [user]);
+    console.log('Processed data:', processed);
+    return processed;
+  }, [data, validateCoordinates]);
+
+  // חישוב מרכז המפה
+  const mapCenter = useMemo(() => {
+    const allPoints = [
+      ...(processedData.elderly || []).map(e => e.location),
+      ...(processedData.volunteers || []).map(v => v.location)
+    ].filter(Boolean);
+
+    if (allPoints.length === 0) {
+      return [31.7767, 35.2345]; // ברירת מחדל: ירושלים
+    }
+
+    const sumLat = allPoints.reduce((sum, point) => sum + point[0], 0);
+    const sumLng = allPoints.reduce((sum, point) => sum + point[1], 0);
+    
+    return [
+      sumLat / allPoints.length,
+      sumLng / allPoints.length
+    ];
+  }, [processedData]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // בדיקה אם userLocation קיים ומכיל ערכים תקינים
-        if (!userLocation || userLocation.length < 2) {
-          console.log('ממתין למיקום המשתמש לפני טעינת נתונים');
-          return; // יוצאים מהפונקציה אם אין מיקום תקין
-        }
+    setCenter(mapCenter);
+  }, [mapCenter]);
 
-        const queryParams = new URLSearchParams({
-          lat: userLocation[0],
-          lng: userLocation[1],
-          radius: parseInt(filters.radius) || 10
-        });
-        
-        // הוספת פרמטרים נוספים רק אם הם לא ריקים
-        if (filters.elderlyStatus) {
-          queryParams.append('elderlyStatus', filters.elderlyStatus);
-        }
-        
-        if (filters.volunteerStatus) {
-          queryParams.append('volunteerStatus', filters.volunteerStatus);
-        }
-        
-        if (filters.lastVisitDays) {
-          queryParams.append('lastVisitDays', filters.lastVisitDays);
-        }
-
-        console.log('שולח בקשה ל-API:', `/api/dashboard/map?${queryParams}`);
-        const response = await fetch(`/api/dashboard/map?${queryParams}`);
-        
-        // בדיקה אם התגובה תקינה
-        if (!response.ok) {
-          console.error('שגיאת תגובה מהשרת:', response.status, response.statusText);
-          // נסיון לקרוא את התוכן גם אם אינו JSON תקין
-          const errorText = await response.text();
-          console.error('תוכן השגיאה:', errorText);
-          throw new Error(`שגיאת שרת: ${response.status} ${response.statusText}`);
-        }
-        
-        console.log('התקבלה תגובה תקינה מהשרת');
-        const responseText = await response.text();
-        
-        // בדיקה אם התגובה מכילה JSON תקין
-        if (!responseText || responseText.trim() === '') {
-          throw new Error('התגובה מהשרת ריקה');
-        }
-        
-        // בדיקה אם התגובה מתחילה ב-HTML במקום JSON
-        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-          console.error('התקבל HTML במקום JSON:', responseText.substring(0, 100));
-          throw new Error('התקבל HTML במקום JSON מהשרת');
-        }
-        
-        // ניסיון לפענח את ה-JSON
-        let data;
-        try {
-          data = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error('שגיאה בפענוח JSON:', parseError);
-          console.error('התוכן שהתקבל:', responseText.substring(0, 200));
-          throw new Error(`שגיאה בפענוח JSON: ${parseError.message}`);
-        }
-        
-        // בדיקה אם הנתונים שהתקבלו תקינים
-        if (!data || !data.elderly || !data.volunteers) {
-          console.error('המידע שהתקבל מהשרת לא תקין:', data);
-          throw new Error('מבנה הנתונים שהתקבל מהשרת אינו תקין');
-        }
-        
-        console.log('מידע תקין התקבל:', {
-          elderly: data.elderly.length,
-          volunteers: data.volunteers.length
-        });
-        
-        // פילטור לפי חיפוש טקסטואלי
-        if (filters.searchTerm) {
-          const searchLower = filters.searchTerm.toLowerCase();
-          data.elderly = data.elderly.filter(elder => 
-            elder.firstName.toLowerCase().includes(searchLower) ||
-            elder.lastName.toLowerCase().includes(searchLower) ||
-            (elder.address && typeof elder.address === 'string' && elder.address.toLowerCase().includes(searchLower))
-          );
-          data.volunteers = data.volunteers.filter(volunteer =>
-            volunteer.firstName.toLowerCase().includes(searchLower) ||
-            volunteer.lastName.toLowerCase().includes(searchLower)
-          );
-        }
-        
-        // פילטור לפי ימים מאז ביקור אחרון
-        if (filters.lastVisitDays) {
-          const days = parseInt(filters.lastVisitDays);
-          data.elderly = data.elderly.filter(elder => {
-            // אם הסטטוס 'visited', כולל אותו גם אם אין תאריך
-            if (elder.status === 'visited' && !elder.lastVisit) {
-              return true;
-            }
-            
-            // אם יש תאריך ביקור אחרון, בדוק אם הוא בטווח הזמן המבוקש
-            if (elder.lastVisit) {
-              const lastVisitDate = new Date(elder.lastVisit);
-              const daysSinceLastVisit = Math.floor((Date.now() - lastVisitDate.getTime()) / (1000 * 60 * 60 * 24));
-              return daysSinceLastVisit <= days;
-            }
-            
-            // אם אין תאריך ביקור אחרון וסטטוס לא 'visited', לא כולל
-            return false;
-          });
-        }
-        
-        setMapData(data);
-      } catch (error) {
-        console.error('שגיאה בטעינת נתוני המפה:', error);
-        // הגדר נתוני ברירת מחדל ריקים
-        setMapData({ elderly: [], volunteers: [] });
-      }
-    };
-
-    // מפעילים את הפונקציה רק אם יש מיקום תקין
-    if (userLocation && userLocation.length === 2) {
-      fetchData();
-    }
-  }, [filters, userLocation]);
-
-  // חישוב מסלול אופטימלי
-  const optimalRoute = filters.showRoute && userLocation && mapData.elderly && mapData.elderly.length > 0
-    ? calculateOptimalRoute(mapData.elderly, userLocation)
-    : [];
-  
-  const routeCoordinates = optimalRoute.map(elder => 
-    elder && elder.location && elder.location.coordinates && elder.location.coordinates.length >= 2
-      ? [elder.location.coordinates[1], elder.location.coordinates[0]]
-      : null
-  ).filter(coords => coords !== null); // מסנן קואורדינטות לא תקינות
-  
-  if (routeCoordinates.length > 0 && userLocation && userLocation.length === 2) {
-    routeCoordinates.unshift(userLocation);
-  }
-
-  if (isLoadingLocation || !userLocation) {
+  if (!data) {
     return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>טוען מיקום...</p>
-      </div>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px' 
+      }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
     <div className="map-container">
-      <div className="map-and-filters">
-        <div className="map-wrapper">
           <MapContainer
-            center={userLocation}
-            zoom={13}
-            style={{ height: '100%', width: '100%' }}
-          >
-            <MapUpdater center={userLocation} />
+        center={center}
+        zoom={12}
+        style={{ height: '400px', width: '100%' }}
+      >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
+        <MapUpdater center={center} />
+        {user && validateCoordinates(center) && (
+          <RadiusCircleUpdater center={center} radius={radius} />
+        )}
 
-            {/* סמן המיקום הנוכחי */}
+        {processedData.elderly.map((elder, index) => (
+          elder && elder.location && validateCoordinates(elder.location) && (
             <Marker
-              position={userLocation}
-              icon={new L.Icon({
-                iconUrl: '/icons/current-location.svg',
-                iconSize: [35, 35],
-                iconAnchor: [17, 17]
-              })}
+              key={elder.id || `elder-${index}`}
+              position={elder.location}
+              icon={createElderlyIcon(elder.urgency || 'low')}
             >
               <Popup>
-                <div className="popup-content">
-                  <h3>המיקום שלך</h3>
-                </div>
-              </Popup>
-            </Marker>
-            
-            {/* מעגל רדיוס החיפוש */}
-            <RadiusCircleUpdater center={userLocation} radius={filters.radius} />
-
-            {/* סמנים עבור זקנים */}
-            {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly.map((elder) => (
-              elder && elder.location && elder.location.coordinates && elder.location.coordinates.length >= 2 ? (
-                <Marker
-                  key={elder._id}
-                  position={[elder.location.coordinates[1], elder.location.coordinates[0]]}
-                  icon={createElderlyIcon(calculateUrgency(elder))}
-                >
-                  <Popup>
-                    <div className="popup-content">
+                <div>
                       <h3>{elder.firstName} {elder.lastName}</h3>
-                      <p>כתובת: {elder.address}</p>
-                      <p>סטטוס: {elder.status === 'פעיל' ? 'פעיל' : 'לא פעיל'}</p>
-                      <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
-                      <p>זמן מאז ביקור אחרון: {
-                        !elder.lastVisit ? 'אין ביקור קודם' :
-                        Math.floor((new Date() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)) + ' ימים'
-                      }</p>
-                      <p>מרחק: {elder.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
-                      <p style={{
-                        fontWeight: 'bold', 
-                        color: calculateUrgency(elder) === 'high' ? '#e74c3c' :
-                              calculateUrgency(elder) === 'medium' ? '#f39c12' : '#2ecc71'
-                      }}>
-                        דחיפות: {
-                          calculateUrgency(elder) === 'high' ? 'גבוהה' :
-                          calculateUrgency(elder) === 'medium' ? 'בינונית' : 'נמוכה'
-                        }
-                      </p>
+                  <p>
+                    {elder.address && typeof elder.address === 'object' 
+                      ? `${elder.address.street || ''}, ${elder.address.city || ''}`
+                      : elder.address || 'כתובת לא זמינה'}
+                  </p>
+                  {elder.lastVisit && (
+                    <p>ביקור אחרון: {new Date(elder.lastVisit).toLocaleDateString('he-IL')}</p>
+                  )}
                     </div>
                   </Popup>
                 </Marker>
-              ) : null
+          )
             ))}
 
-            {/* סמנים עבור מתנדבים */}
-            {mapData.volunteers && mapData.volunteers.length > 0 && mapData.volunteers.map((volunteer) => (
-              volunteer && volunteer.location && volunteer.location.coordinates && volunteer.location.coordinates.length >= 2 ? (
+        {processedData.volunteers.map((volunteer, index) => (
+          volunteer && volunteer.location && validateCoordinates(volunteer.location) && (
                 <Marker
-                  key={volunteer._id}
-                  position={[volunteer.location.coordinates[1], volunteer.location.coordinates[0]]}
+              key={volunteer.id || `volunteer-${index}`}
+              position={volunteer.location}
                   icon={volunteerIcon}
                 >
                   <Popup>
-                    <div className="popup-content">
+                <div>
                       <h3>{volunteer.firstName} {volunteer.lastName}</h3>
-                      <p>סטטוס: {volunteer.status === 'available' ? 'זמין' : 'עסוק'}</p>
-                      <p>פעיל לאחרונה: {volunteer.lastActive ? new Date(volunteer.lastActive).toLocaleString('he-IL') : 'לא ידוע'}</p>
-                      <p>מרחק: {volunteer.distanceFromCurrentLocation.toFixed(1)} ק"מ</p>
+                  <p>
+                    {volunteer.address && typeof volunteer.address === 'object'
+                      ? `${volunteer.address.street || ''}, ${volunteer.address.city || ''}`
+                      : volunteer.address || 'כתובת לא זמינה'}
+                  </p>
+                  <p>{volunteer.status === 'available' ? 'זמין' : 'לא זמין'}</p>
                     </div>
                   </Popup>
                 </Marker>
-              ) : null
-            ))}
-
-            {/* מסלול מומלץ */}
-            {filters.showRoute && routeCoordinates.length > 1 && (
-              <Polyline
-                positions={routeCoordinates}
-                color="#3498db"
-                weight={3}
-                opacity={0.8}
-                dashArray="10,10"
-              />
-            )}
+          )
+        ))}
           </MapContainer>
-        </div>
-        
-        <div className="sidebar">
-          <LocationSelector 
-            userLocation={userLocation}
-            onLocationChange={setUserLocation}
-            useGpsLocation={getGpsLocation}
-          />
-          <FilterPanel filters={filters} setFilters={setFilters} />
-          <MapLegend />
-        </div>
-      </div>
       
-      <div className="stats-container">
-        <StatsPanel mapData={mapData} />
-      </div>
+      <StatsPanel mapData={processedData} />
+      {isAdminView && <MapLegend />}
     </div>
   );
 };
