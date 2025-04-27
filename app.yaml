@@ -6,7 +6,7 @@ services:
       deploy_on_push: true
       repo: your-username/gis-2025
     build_command: cd client && npm install && npm run build
-    run_command: cd client && npm run preview -- --host 0.0.0.0 --port 80
+    run_command: cd client && npx vite preview --host 0.0.0.0 --port 80
     http_port: 80
     instance_count: 1
     instance_size_slug: basic-xxs
