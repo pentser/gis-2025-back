@@ -1,0 +1,514 @@
+{
+  "info": {
+    "name": "Elderly Care System API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "volunteerToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"adminToken\", jsonData.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"admin123\",\n    \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Volunteer Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"volunteerToken\", jsonData.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"volunteer@example.com\",\n    \"password\": \"volunteer123\",\n    \"role\": \"volunteer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    // Required Fields\n    \"email\": \"newuser@example.com\",\n    \"password\": \"password123\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"role\": \"volunteer\",\n    \n    // Optional Fields\n    \"address\": \"123 Main St\",\n    \"phone\": \"0501234567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Validate Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Elderly",
+      "item": [
+        {
+          "name": "Get All Elderly",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/elderly?city=Tel Aviv&status=פעיל&search=John",
+              "host": ["{{baseUrl}}"],
+              "path": ["elderly"],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "Tel Aviv"
+                },
+                {
+                  "key": "status",
+                  "value": "פעיל"
+                },
+                {
+                  "key": "search",
+                  "value": "John"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Elderly",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/elderly/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["elderly", ":id"]
+            }
+          }
+        },
+        {
+          "name": "Create Elderly",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    // Required Fields\n    \"firstName\": \"Sarah\",\n    \"lastName\": \"Cohen\",\n    \"idNumber\": \"123456789\",\n    \"birthDate\": \"1940-01-01\",\n    \"phone\": \"0501234567\",\n    \"address\": {\n        \"street\": \"Herzl 1\",\n        \"city\": \"Tel Aviv\"\n    },\n    \n    // Optional Fields\n    \"address.zipCode\": \"12345\",\n    \"emergencyContact\": {\n        \"name\": \"David Cohen\",\n        \"phone\": \"0507654321\",\n        \"relation\": \"Son\"\n    },\n    \"medicalInfo\": {\n        \"conditions\": [\"Diabetes\", \"High Blood Pressure\"],\n        \"medications\": [\"Insulin\", \"Blood Pressure Medication\"],\n        \"allergies\": [\"Penicillin\"],\n        \"notes\": \"Requires assistance with medication\"\n    },\n    \"preferences\": {\n        \"visitFrequency\": \"שבועי\",\n        \"preferredDays\": [\"ראשון\", \"שלישי\"],\n        \"preferredTime\": \"בוקר\"\n    },\n    \"notes\": \"Prefers female volunteers\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/elderly",
+              "host": ["{{baseUrl}}"],
+              "path": ["elderly"]
+            }
+          }
+        },
+        {
+          "name": "Update Elderly",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    // Allowed Fields\n    \"firstName\": \"Sarah\",\n    \"lastName\": \"Cohen\",\n    \"phone\": \"0501234567\",\n    \"address\": {\n        \"street\": \"Herzl 1\",\n        \"city\": \"Tel Aviv\"\n    },\n    \"location\": {\n        \"type\": \"Point\",\n        \"coordinates\": [34.7818, 32.0853]\n    },\n    \"emergencyContact\": {\n        \"name\": \"David Cohen\",\n        \"phone\": \"0507654321\",\n        \"relation\": \"Son\"\n    },\n    \"status\": \"פעיל\",\n    \"medicalInfo\": {\n        \"conditions\": [\"Diabetes\"],\n        \"medications\": [\"Insulin\"],\n        \"allergies\": [\"Penicillin\"]\n    },\n    \"preferences\": {\n        \"visitFrequency\": \"שבועי\",\n        \"preferredDays\": [\"ראשון\"],\n        \"preferredTime\": \"בוקר\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/elderly/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["elderly", ":id"]
+            }
+          }
+        },
+        {
+          "name": "Delete Elderly",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/elderly/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["elderly", ":id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Visits",
+      "item": [
+        {
+          "name": "Get All Visits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{volunteerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/visits?startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["visits"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Visit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{volunteerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/visits/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["visits", ":id"]
+            }
+          }
+        },
+        {
+          "name": "Create Visit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{volunteerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    // Required Fields\n    \"elder\": \"507f1f77bcf86cd799439011\",\n    \"date\": \"2024-03-20T10:00:00Z\",\n    \"duration\": 60,\n    \n    // Optional Fields\n    \"status\": \"scheduled\",\n    \"notes\": \"First visit, needs help with groceries\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/visits",
+              "host": ["{{baseUrl}}"],
+              "path": ["visits"]
+            }
+          }
+        },
+        {
+          "name": "Update Visit",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{volunteerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    // Allowed Fields\n    \"date\": \"2024-03-20T11:00:00Z\",\n    \"duration\": 90,\n    \"status\": \"completed\",\n    \"notes\": \"Visit completed successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/visits/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["visits", ":id"]
+            }
+          }
+        },
+        {
+          "name": "Delete Visit",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{volunteerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/visits/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["visits", ":id"]
+            }
+          }
+        },
+        {
+          "name": "Get Elder's Visits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{volunteerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/visits/elder/:elderId",
+              "host": ["{{baseUrl}}"],
+              "path": ["visits", "elder", ":elderId"]
+            }
+          }
+        },
+        {
+          "name": "Get Visit Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/visits/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["visits", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Volunteers",
+      "item": [
+        {
+          "name": "Get All Volunteers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/volunteers",
+              "host": ["{{baseUrl}}"],
+              "path": ["volunteers"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get Map Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/map?lat=32.0853&lng=34.7818",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "map"],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "32.0853"
+                },
+                {
+                  "key": "lng",
+                  "value": "34.7818"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Admin Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+} 
