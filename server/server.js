@@ -42,6 +42,11 @@ app.get('/', (req, res) => {
   res.json({ message: 'ברוכים הבאים ל-GIS-2025 API' });
 });
 
+// נקודת קצה לבדיקת בריאות
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
@@ -54,8 +59,9 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('מחובר למסד הנתונים MongoDB');
     const port = process.env.PORT || 5000;
-    app.listen(port, () => {
-      console.log(`השרת פועל בפורט ${port}`);
+    const host = process.env.HOST || '0.0.0.0';
+    app.listen(port, host, () => {
+      console.log(`השרת פועל על ${host}:${port}`);
     });
   })
   .catch((error) => {

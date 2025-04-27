@@ -10,7 +10,7 @@ services:
   instance_count: 1
   instance_size_slug: basic-xxs
   run_command: node server.js
-  health_check_path: /
+  health_check_path: /api/health
   health_check_interval: 30s
   envs:
   - key: NODE_ENV
@@ -21,6 +21,8 @@ services:
     value: ${JWT_SECRET}
   - key: PORT
     value: "5000"
+  - key: HOST
+    value: "0.0.0.0"
 
 - name: client
   github:

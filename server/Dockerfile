@@ -11,5 +11,4 @@ COPY . .
 EXPOSE 5000
 
 # הגדרת הפקודה להפעלת השרת
-ENTRYPOINT ["node"]
-CMD ["server.js"]
+CMD ["node", "server.js"]
