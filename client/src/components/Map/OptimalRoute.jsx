@@ -70,6 +70,15 @@ const OptimalRoute = ({ volunteerLocation, elderlyLocations }) => {
     };
   }, [volunteerLocation, elderlyLocations]);
 
+  const calculateOptimalRoute = (elderly, startPoint) => {
+    return elderly
+      .filter(elder => elder.status === 'פעיל')
+      .sort((a, b) => {
+        // ... לוגיקת המיון לפי דחיפות ומרחק
+      })
+      .slice(0, 5); // מקסימום 5 נקודות במסלול
+  };
+
   return (
     <div id="map" style={{ height: '500px', width: '100%' }} />
   );
