@@ -1,0 +1,35 @@
+name: gis-2025
+services:
+- name: server
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: your-username/gis-2025-back
+  dockerfile_path: server/Dockerfile
+  http_port: 5000
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  run_command: node server.js
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: MONGODB_URI
+    value: ${MONGODB_URI}
+  - key: JWT_SECRET
+    value: ${JWT_SECRET}
+  - key: PORT
+    value: "5000"
+
+- name: client
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: your-username/gis-2025-back
+  dockerfile_path: client/Dockerfile
+  http_port: 80
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  run_command: nginx -g 'daemon off;'
+  envs:
+  - key: VITE_API_URL
+    value: https://${DOMAIN}/api 
