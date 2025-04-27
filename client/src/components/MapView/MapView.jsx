@@ -451,7 +451,11 @@ const MapView = () => {
               <Popup>
                 <div className="popup-content">
                   <h3>{elder.firstName} {elder.lastName}</h3>
-                  {elder.address && <p><strong>כתובת:</strong> {elder.address}</p>}
+                  {elder.address && typeof elder.address === 'object' ? (
+                    <p><strong>כתובת:</strong> {`${elder.address.street || ''}, ${elder.address.city || ''} ${elder.address.zipCode || ''}`}</p>
+                  ) : elder.address && (
+                    <p><strong>כתובת:</strong> {elder.address}</p>
+                  )}
                   {elder.phone && <p><strong>טלפון:</strong> {elder.phone}</p>}
                   <p><strong>דחיפות:</strong> {getUrgencyText(elder.urgency)}</p>
                   {elder.lastVisit && (
