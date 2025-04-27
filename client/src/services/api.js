@@ -146,6 +146,15 @@ export const deleteElderly = (id) =>
     method: 'DELETE',
   });
 
+export const softDeleteElderly = (id) =>
+  fetchWithAuth(`/api/elderly/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status: 'לא פעיל' }),
+  });
+
 export const fetchDashboardData = () => fetchWithAuth('/api/dashboard');
 
 export const fetchMapData = (lat, lng) => {
