@@ -5,10 +5,12 @@ services:
     branch: main
     deploy_on_push: true
     repo: elipe/gis-2025-back
-  dockerfile_path: server/Dockerfile
+  source_dir: server
   http_port: 5000
   instance_count: 1
   instance_size_slug: basic-xxs
+  build_command: npm install
+  run_command: npm start
   envs:
   - key: NODE_ENV
     value: production
@@ -24,10 +26,12 @@ services:
     branch: main
     deploy_on_push: true
     repo: elipe/gis-2025-back
-  dockerfile_path: client/Dockerfile
+  source_dir: client
   http_port: 80
   instance_count: 1
   instance_size_slug: basic-xxs
+  build_command: npm install && npm run build
+  run_command: npm run preview -- --host 0.0.0.0 --port 80
   envs:
   - key: VITE_API_URL
     value: https://${DOMAIN}/api 
