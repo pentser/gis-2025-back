@@ -1,0 +1,49 @@
+name: gis-2025
+services:
+  - name: client
+    github:
+      branch: eli_final_project
+      deploy_on_push: true
+      repo: your-username/gis-2025
+    build_command: cd client && npm install && npm run build
+    run_command: cd client && npm run preview
+    http_port: 80
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /
+    envs:
+      - key: VITE_API_URL
+        value: ${server.URL}
+      - key: NODE_ENV
+        value: production
+
+  - name: server
+    github:
+      branch: eli_final_project
+      deploy_on_push: true
+      repo: your-username/gis-2025
+    build_command: cd server && npm install
+    run_command: cd server && npm start
+    http_port: 5000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /api
+    envs:
+      - key: MONGODB_URI
+        value: ${MONGODB_URI}
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+
+databases:
+  - engine: MONGODB
+    name: gis-2025-db
+    production: false
+    cluster_name: gis-2025-cluster
+    db_name: gis-2025
+    db_user: gis-2025-user 
