@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { 
   AppBar, 
   Box, 
@@ -24,12 +24,42 @@ import Sidebar from './Sidebar';
 import styles from './Layout.module.css';
 import { useAuth } from '../../context/AuthContext';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import PeopleIcon from '@mui/icons-material/People';
+import GroupIcon from '@mui/icons-material/Group';
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState(0);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (user?.role === 'volunteer') {
+      switch (location.pathname) {
+        case '/app/map':
+          setSelectedTab(0);
+          break;
+        case '/app/myvisits':
+          setSelectedTab(1);
+          break;
+        case '/app/profile':
+          setSelectedTab(2);
+          break;
+        default:
+          setSelectedTab(0);
+      }
+    }
+  }, [location.pathname, user]);
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (location.pathname.includes('/admin') && user.role !== 'admin') {
+    return <Navigate to="/app/map" />;
+  }
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -41,6 +71,7 @@ export default function Layout() {
   };
 
   const handleTabChange = (event, newValue) => {
+    setSelectedTab(newValue);
     switch(newValue) {
       case 0:
         navigate('/app/map');
@@ -54,17 +85,7 @@ export default function Layout() {
     }
   };
 
-  const getCurrentTab = () => {
-    const path = location.pathname;
-    if (path === '/app/map') return 0;
-    if (path === '/app/myvisits') return 1;
-    if (path === '/app/profile') return 2;
-    return false;
-  };
-
-  // עדכון הפונקציה handleLocationClick
   const handleLocationClick = () => {
-    // נפעיל את הפונקציה handleLocationToggle מתוך MapView
     window.dispatchEvent(new CustomEvent('toggleLocation'));
   };
 
@@ -102,14 +123,14 @@ export default function Layout() {
           </Box>
 
           {/* Center Section - Navigation Tabs */}
-          {user && (
+          {user && user.role === 'volunteer' && (
             <Box sx={{ 
               flexGrow: 1, 
               display: 'flex', 
               justifyContent: 'center'
             }}>
               <Tabs 
-                value={getCurrentTab()} 
+                value={selectedTab}
                 onChange={handleTabChange}
                 textColor="inherit"
                 indicatorColor="secondary"
@@ -140,7 +161,7 @@ export default function Layout() {
             </Box>
           )}
 
-          {/* Left Section - Simple Location Button */}
+          {/* Left Section - Location Button */}
           {user && (
             <Box sx={{ 
               minWidth: 'fit-content',
@@ -163,7 +184,6 @@ export default function Layout() {
       </AppBar>
 
       <Box component="nav" className={styles.drawer}>
-        {/* תפריט למובייל */}
         <Drawer
           variant="temporary"
           anchor="right"
@@ -174,7 +194,7 @@ export default function Layout() {
           }}
           className={styles.mobileDrawer}
           ModalProps={{
-            keepMounted: true // טוב יותר לביצועים במובייל
+            keepMounted: true
           }}
         >
           <Sidebar onClose={handleDrawerToggle} />

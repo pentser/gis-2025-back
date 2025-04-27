@@ -1,126 +1,260 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Container,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
-  Grid,
-  Card,
-  CardContent,
   Button,
-  IconButton,
-  CircularProgress,
-  Alert
+  Box,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { fetchVisits, deleteVisit } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
 import styles from './VisitList.module.css';
 
+const statusTranslations = {
+  scheduled: 'מתוכנן',
+  completed: 'בוצע',
+  cancelled: 'בוטל',
+  pending: 'ממתין',
+  inProgress: 'בביצוע'
+};
+
 const VisitList = () => {
+  const navigate = useNavigate();
   const [visits, setVisits] = useState([]);
-  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    status: '',
+    fromDate: '',
+    toDate: ''
+  });
 
   useEffect(() => {
-    loadVisits();
+    fetchVisits();
   }, []);
 
-  const loadVisits = async () => {
+  const fetchVisits = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const data = await fetchVisits();
+      // קבלת הטוקן מהלוקל סטורג'
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('אין הרשאה');
+      }
+
+      const response = await fetch('http://localhost:5000/api/visits', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('אין הרשאה');
+        }
+        throw new Error('שגיאה בטעינת הביקורים');
+      }
+
+      const data = await response.json();
       setVisits(data);
     } catch (err) {
+      console.error('Error:', err);
       setError(err.message);
+      if (err.message === 'אין הרשאה') {
+        // אפשר להוסיף ניווט לדף ההתחברות
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('האם אתה בטוח שברצונך למחוק את הביקור?')) {
-      try {
-        setError(null);
-        await deleteVisit(id);
-        await loadVisits();
-      } catch (err) {
-        setError(err.message);
-      }
-    }
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
+  const handleEditVisit = (visitId) => {
+    navigate(`/app/visits/new?visitId=${visitId}`);
+  };
+
+  const getFilteredVisits = () => {
+    return visits.filter(visit => {
+      // בדיקת תקינות תאריך
+      const visitDate = new Date(visit.date);
+      if (isNaN(visitDate.getTime())) {
+        return false;
+      }
+
+      // פילטור לפי חיפוש
+      const searchMatch = !filters.searchTerm || 
+        (visit.elder && `${visit.elder.firstName} ${visit.elder.lastName}`.toLowerCase().includes(filters.searchTerm.toLowerCase()));
+
+      // פילטור לפי סטטוס
+      const statusMatch = !filters.status || visit.status === filters.status;
+
+      // פילטור לפי תאריכים
+      const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
+      const toDate = filters.toDate ? new Date(filters.toDate) : null;
+      const dateMatch = (!fromDate || visitDate >= fromDate) && (!toDate || visitDate <= toDate);
+
+      return searchMatch && statusMatch && dateMatch;
+    });
+  };
+
+  if (loading) return <div>טוען...</div>;
+  if (error) return <div>{error}</div>;
+
   return (
-    <Container className={styles.container}>
-      <div className={styles.header}>
-        <Typography variant="h4" component="h1">
-          רשימת ביקורים
-        </Typography>
-        <Button
-          component={Link}
-          to="/visits/new"
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-        >
-          הוסף ביקור
-        </Button>
-      </div>
+    <Container>
+      <Paper className={styles.paper}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h5" component="h1">
+            ניהול ביקורים
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate('/app/visits/new')}
+            className={styles.addButton}
+          >
+            צור ביקור
+          </Button>
+        </Box>
 
-      {error && (
-        <Alert severity="error" className={styles.alert}>
-          {error}
-        </Alert>
-      )}
+        <Box className={styles.filters}>
+          <TextField
+            label="חיפוש לפי שם קשיש/מתנדב"
+            value={filters.searchTerm}
+            onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+            className={styles.searchField}
+          />
+          
+          <FormControl className={styles.statusFilter}>
+            <InputLabel>סטטוס</InputLabel>
+            <Select
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              style={{ minWidth: '200px' }}
+            >
+              <MenuItem value="">הכל</MenuItem>
+              <MenuItem value="scheduled">מתוכנן</MenuItem>
+              <MenuItem value="completed">בוצע</MenuItem>
+              <MenuItem value="cancelled">בוטל</MenuItem>
+            </Select>
+          </FormControl>
 
-      {loading ? (
-        <div className={styles.loading}>
-          <CircularProgress />
-        </div>
-      ) : visits.length === 0 ? (
-        <Alert severity="info" className={styles.alert}>
-          אין ביקורים להצגה
-        </Alert>
-      ) : (
-        <Grid container spacing={3}>
-          {visits.map((visit) => (
-            <Grid item xs={12} sm={6} md={4} key={visit._id}>
-              <Card className={styles.card}>
-                <CardContent>
-                  <Typography variant="h6">
-                    {visit.elder ? `${visit.elder.firstName} ${visit.elder.lastName}` : 'שם הקשיש לא ידוע'}
-                  </Typography>
-                  <Typography color="textSecondary">
-                    תאריך: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleDateString('he-IL') : 'תאריך לא ידוע'}
-                  </Typography>
-                  <Typography color="textSecondary">
-                    שעה: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleTimeString('he-IL') : 'שעה לא ידועה'}
-                  </Typography>
-                  <Typography color="textSecondary">
-                    סטטוס: {visit.status || 'לא ידוע'}
-                  </Typography>
-                  <div className={styles.actions}>
-                    <IconButton
-                      component={Link}
-                      to={`/visits/${visit._id}`}
-                      color="primary"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => handleDelete(visit._id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </div>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
+          <TextField
+            type="date"
+            label="מתאריך"
+            value={filters.fromDate}
+            onChange={(e) => handleFilterChange('fromDate', e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            className={styles.dateInput}
+          />
+          <TextField
+            type="date"
+            label="עד תאריך"
+            value={filters.toDate}
+            onChange={(e) => handleFilterChange('toDate', e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            className={styles.dateInput}
+          />
+        </Box>
+
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell align="right">תאריך</TableCell>
+                <TableCell align="right">שעה</TableCell>
+                <TableCell align="right">קשיש</TableCell>
+                <TableCell align="right">מתנדב</TableCell>
+                <TableCell align="right">עיר</TableCell>
+                <TableCell align="right">משך (דקות)</TableCell>
+                <TableCell align="right" style={{ minWidth: '150px' }}>סטטוס</TableCell>
+                <TableCell align="right">הערות</TableCell>
+                <TableCell align="right">פעולות</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {getFilteredVisits().map((visit) => {
+                // בדיקת תקינות התאריך
+                const visitDate = new Date(visit.date);
+                if (isNaN(visitDate.getTime())) return null;
+
+                // שליפת שם הקשיש
+                const elderName = visit.elder?.firstName && visit.elder?.lastName 
+                  ? `${visit.elder.firstName} ${visit.elder.lastName}`
+                  : visit.elderName || 'לא ידוע';  // שימוש בשדה elderName אם קיים
+
+                // שליפת שם המתנדב
+                const volunteerName = visit.volunteer && visit.volunteer.firstName && visit.volunteer.lastName
+                  ? `${visit.volunteer.firstName} ${visit.volunteer.lastName}`.trim()
+                  : 'לא ידוע';
+
+                // שליפת העיר
+                const city = visit.elder?.city || 
+                            (visit.elder?.address?.city) || 
+                            'לא ידוע';
+
+                return (
+                  <TableRow key={visit._id} hover>
+                    <TableCell align="right">
+                      {visitDate.toLocaleDateString('he-IL')}
+                    </TableCell>
+                    <TableCell align="right">
+                      {visitDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                    </TableCell>
+                    <TableCell align="right">{elderName}</TableCell>
+                    <TableCell align="right">{volunteerName}</TableCell>
+                    <TableCell align="right">{city}</TableCell>
+                    <TableCell align="right">{visit.duration}</TableCell>
+                    <TableCell align="right" style={{ minWidth: '150px' }}>
+                      {visit.status === 'scheduled' ? 'מתוכנן' :
+                       visit.status === 'completed' ? 'בוצע' :
+                       visit.status === 'cancelled' ? 'בוטל' :
+                       visit.status === 'pending' ? 'ממתין' :
+                       visit.status === 'inProgress' ? 'בביצוע' :
+                       visit.status}
+                    </TableCell>
+                    <TableCell align="right">
+                      <div className={styles.notesContent}>
+                        {visit.notes || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleEditVisit(visit._id)}
+                        className={styles.actionButton}
+                      >
+                        דווח/עדכן
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
     </Container>
   );
 };

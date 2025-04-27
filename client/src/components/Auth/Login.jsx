@@ -55,13 +55,19 @@ const Login = () => {
     }
 
     try {
-      await login({ ...formData, role: isAdmin ? 'admin' : 'volunteer' });
-      if (isAdmin) {
+      const response = await login({ 
+        ...formData, 
+        role: isAdmin ? 'admin' : 'volunteer' 
+      });
+      
+      // ננווט לדף המתאים
+      if (response.user.role === 'admin') {
         navigate('/app/dashboard');
       } else {
         navigate('/app/map');
       }
     } catch (err) {
+      console.error('שגיאת התחברות:', err);
       setError(err.message || 'שגיאה בהתחברות');
     }
   };

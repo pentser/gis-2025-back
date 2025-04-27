@@ -1,5 +1,5 @@
 .dashboard {
-  padding: 16px;
+  padding: 24px;
 }
 
 .dashboard h2 {
@@ -83,6 +83,10 @@
 
 .refreshButton {
   margin-right: 10px;
+}
+
+.existingDashboard {
+  /* שומר על הסטיילינג הקיים של הדשבורד */
 }
 
 @media (max-width: 600px) {

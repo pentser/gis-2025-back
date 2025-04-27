@@ -1,0 +1,27 @@
+.container {
+  padding: 24px;
+}
+
+.paper {
+  padding: 24px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+}
+
+.error {
+  color: #d32f2f;
+  padding: 16px;
+}
+
+.tableCell {
+  text-align: right;
+}
+
+.actionButton {
+  min-width: 100px;
+} 

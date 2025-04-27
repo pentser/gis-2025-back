@@ -4,116 +4,131 @@ import {
   Typography, 
   Grid, 
   Card, 
-  CardContent, 
+  CardContent,
   Button,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import styles from './ElderlyList.module.css';
+import { fetchElderly, deleteElderly } from '../../services/api';
+import ErrorBoundary from '../ErrorBoundary/ErrorBoundary';
 
 const ElderlyList = () => {
   const [elderly, setElderly] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchElderly();
+    loadElderly();
   }, []);
 
-  const fetchElderly = async () => {
+  const loadElderly = async () => {
     try {
-      const response = await fetch('/api/elderly');
-      if (!response.ok) {
-        throw new Error('שגיאה בטעינת נתוני הקשישים');
-      }
-      const data = await response.json();
-      setElderly(data);
+      setLoading(true);
+      setError(null);
+      const data = await fetchElderly();
+      // וידוא שהנתונים הם מערך
+      setElderly(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message);
+      console.error('שגיאה בטעינת רשימת הקשישים:', err);
+      setError('אירעה שגיאה בטעינת הנתונים');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm('האם אתה בטוח שברצונך למחוק קשיש זה?')) {
       try {
-        const response = await fetch(`/api/elderly/${id}`, {
-          method: 'DELETE',
-        });
-        if (!response.ok) {
-          throw new Error('שגיאה במחיקת הקשיש');
-        }
-        fetchElderly(); // רענון הרשימה
+        await deleteElderly(id);
+        await loadElderly();
       } catch (err) {
-        setError(err.message);
+        setError('אירעה שגיאה במחיקת הקשיש');
       }
     }
   };
 
+  if (loading) {
+    return (
+      <Container sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
   if (error) {
     return (
-      <Container className={styles.container}>
-        <Typography color="error">{error}</Typography>
+      <Container>
+        <Typography color="error" align="center">
+          {error}
+        </Typography>
       </Container>
     );
   }
 
   return (
-    <Container className={styles.container}>
-      <div className={styles.header}>
-        <Typography variant="h4" component="h1">
-          רשימת קשישים
-        </Typography>
-        <Button
-          component={Link}
-          to="/elderly/new"
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-        >
-          הוסף קשיש
-        </Button>
-      </div>
-
-      <Grid container spacing={3}>
-        {elderly.map((person) => (
-          <Grid item xs={12} sm={6} md={4} key={person._id}>
-            <Card className={styles.card}>
-              <CardContent>
-                <Typography variant="h6">
-                  {person.firstName} {person.lastName}
-                </Typography>
-                <Typography color="textSecondary">
-                  גיל: {person.age}
-                </Typography>
-                <Typography color="textSecondary">
-                  כתובת: {person.address}
-                </Typography>
-                <Typography color="textSecondary">
-                  טלפון: {person.phone}
-                </Typography>
-                <div className={styles.actions}>
-                  <IconButton
-                    component={Link}
-                    to={`/elderly/${person._id}`}
-                    color="primary"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => handleDelete(person._id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </div>
-              </CardContent>
-            </Card>
+    <ErrorBoundary>
+      <Container>
+        <Grid container spacing={2} sx={{ mb: 4 }}>
+          <Grid item xs={6}>
+            <Typography variant="h4" component="h1">
+              רשימת קשישים
+            </Typography>
           </Grid>
-        ))}
-      </Grid>
-    </Container>
+          <Grid item xs={6} sx={{ textAlign: 'left' }}>
+            <Button
+              component={Link}
+              to="/app/elderly/new"
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+            >
+              הוסף קשיש
+            </Button>
+          </Grid>
+        </Grid>
+
+        <Grid container spacing={3}>
+          {elderly.map((person) => (
+            <Grid item xs={12} sm={6} md={4} key={person._id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">
+                    {person.firstName} {person.lastName}
+                  </Typography>
+                  <Typography color="textSecondary">
+                    טלפון: {person.phone || 'לא צוין'}
+                  </Typography>
+                  <Typography color="textSecondary">
+                    כתובת: {typeof person.address === 'string' ? person.address : (person.address?.street || 'לא צוינה')}
+                  </Typography>
+                  <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <IconButton
+                      component={Link}
+                      to={`/app/elderly/edit/${person._id}`}
+                      color="primary"
+                      size="small"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => handleDelete(person._id)}
+                      color="error"
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </div>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </ErrorBoundary>
   );
 };
 

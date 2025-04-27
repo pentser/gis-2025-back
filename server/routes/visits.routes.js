@@ -22,15 +22,27 @@ const formatAddress = (address) => {
 // קבלת כל הביקורים
 router.get('/', auth, async (req, res) => {
   try {
+    console.log('מקבל בקשה לשליפת ביקורים');
     const visits = await Visit.find({})
-      .populate('elder', 'firstName lastName')
-      .populate('volunteer', 'firstName lastName')
-      .sort({ lastVisit: -1 });
+      .populate({
+        path: 'elder',
+        select: 'firstName lastName address city',
+        model: 'Elderly'
+      })
+      .populate({
+        path: 'volunteer',
+        select: 'firstName lastName',
+        model: 'User'
+      })
+      .sort({ date: -1 });
+
+    // לוג לבדיקה
+    console.log('נמצאו ביקורים:', visits.length);
     
     res.json(visits);
   } catch (error) {
-    console.error('שגיאה בקבלת הביקורים:', error);
-    res.status(500).json({ message: 'שגיאה בקבלת הביקורים' });
+    console.error('שגיאה בשליפת ביקורים:', error);
+    res.status(500).json({ message: 'שגיאה בשליפת ביקורים' });
   }
 });
 

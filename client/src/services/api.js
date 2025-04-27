@@ -3,37 +3,53 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 // פונקציית עזר להוספת headers
 const getHeaders = () => {
   const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('נדרשת התחברות מחדש');
+  }
   return {
     'Content-Type': 'application/json',
-    'Authorization': token ? `Bearer ${token}` : '',
+    'Authorization': `Bearer ${token}`,
   };
 };
 
 // פונקציית עזר לביצוע בקשות
 export const fetchWithAuth = async (endpoint, options = {}) => {
-  const headers = getHeaders();
-  console.log('שולח בקשה לנקודת קצה:', endpoint);
-  console.log('headers:', headers);
+  try {
+    const headers = getHeaders();
+    console.log('שולח בקשה לנקודת קצה:', endpoint);
+    console.log('headers:', headers);
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...headers,
-      ...options.headers,
-    },
-  });
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+      credentials: 'include',
+    });
 
-  console.log('סטטוס התשובה:', response.status);
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'שגיאת שרת' }));
-    console.error('שגיאה בבקשה:', error);
-    throw new Error(error.message || 'שגיאת שרת');
+    console.log('סטטוס התשובה:', response.status);
+    
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      throw new Error('נדרשת התחברות מחדש');
+    }
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('שגיאה בבקשה:', error);
+      throw new Error(error.message || 'שגיאת שרת');
+    }
+
+    const data = await response.json();
+    console.log('התקבלו נתונים מהשרת:', data);
+    return data;
+  } catch (error) {
+    console.error('שגיאה בביצוע הבקשה:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  console.log('התקבלו נתונים מהשרת:', data);
-  return data;
 };
 
 export const fetchVisits = () => fetchWithAuth('/api/visits');
@@ -215,4 +231,7 @@ export const fetchVolunteerVisits = async () => {
     console.error('שגיאה בקבלת ביקורים:', error);
     throw error;
   }
-}; 
+};
+
+// פונקציה חדשה לשליפת מתנדבים עבור מנהל
+export const fetchAdminVolunteers = () => fetchWithAuth('/api/admin/volunteers'); 

@@ -1,24 +1,46 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config.js';
+import User from '../models/user.model.js';
 
 export const auth = async (req, res, next) => {
   try {
-    // בדיקה האם קיים טוקן בכותרת הבקשה
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      throw new Error();
+      return res.status(401).json({ message: 'אנא התחבר למערכת' });
     }
 
-    // אימות הטוקן
     const decoded = jwt.verify(token, config.jwtSecret);
+    const user = await User.findById(decoded.userId);
     
-    // הוספת המידע המפוענח לאובייקט הבקשה
+    if (!user) {
+      return res.status(401).json({ message: 'משתמש לא נמצא' });
+    }
+
+    req.user = user;
     req.userId = decoded.id;
     
     next();
   } catch (error) {
+    console.error('שגיאת אותנטיקציה:', error);
     res.status(401).json({ message: 'אנא התחבר למערכת' });
+  }
+};
+
+export const isAdmin = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'אנא התחבר למערכת' });
+    }
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'אין לך הרשאות מנהל' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('שגיאת הרשאות:', error);
+    res.status(403).json({ message: 'אין הרשאה לבצע פעולה זו' });
   }
 };
 

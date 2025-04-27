@@ -15,32 +15,86 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { fetchVisitStats, fetchUrgentVisits } from '../../services/api';
 import MapView from '../MapView/MapView';
 import styles from './Dashboard.module.css';
+import { useNavigate } from 'react-router-dom';
+import PeopleIcon from '@mui/icons-material/People';
+import HistoryIcon from '@mui/icons-material/History';
+import GroupIcon from '@mui/icons-material/Group';
+import Box from '@mui/material/Box';
+import { useAuth } from '../../context/AuthContext';
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [urgentVisits, setUrgentVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // בדיקת הרשאות
+    if (!user || user.role !== 'admin') {
+      navigate('/login');
+      return;
+    }
+
     loadDashboardData();
-  }, []);
+  }, [user, navigate]);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [stats, urgentVisits] = await Promise.all([
+      setError(null);
+      
+      const [statsData, urgentData] = await Promise.all([
         fetchVisitStats(),
         fetchUrgentVisits()
       ]);
-      setStats(stats);
-      setUrgentVisits(urgentVisits);
-    } catch (error) {
-      setError(error.message);
+      
+      setStats(statsData);
+      setUrgentVisits(urgentData);
+    } catch (err) {
+      console.error('שגיאה בטעינת נתוני הדשבורד:', err);
+      setError(err.message);
+      
+      if (err.message.includes('התחברות מחדש')) {
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const handleNavigate = (path) => {
+    try {
+      console.log('מנווט לנתיב:', path);
+      navigate(path);
+    } catch (error) {
+      console.error('שגיאת ניווט:', error);
+      setError('שגיאה בניווט לדף המבוקש');
+    }
+  };
+
+  // כפתורי ניווט חדשים
+  const navigationButtons = [
+    {
+      title: 'ביקורים',
+      icon: <HistoryIcon sx={{ fontSize: 40 }} />,
+      path: '/app/visits',
+      color: '#1976d2'
+    },
+    {
+      title: 'קשישים',
+      icon: <PeopleIcon sx={{ fontSize: 40 }} />,
+      path: '/app/elderly',
+      color: '#2e7d32'
+    },
+    {
+      title: 'מתנדבים',
+      icon: <GroupIcon sx={{ fontSize: 40 }} />,
+      path: '/app/adminvolunteers',
+      color: '#ed6c02'
+    }
+  ];
 
   if (loading) {
     return <div className={styles.loading}>טוען...</div>;
@@ -52,6 +106,43 @@ const Dashboard = () => {
 
   return (
     <div className={styles.dashboard}>
+      {/* כפתורי ניווט */}
+      <Box sx={{ mb: 4 }}>
+        <Grid container spacing={3}>
+          {navigationButtons.map((button) => (
+            <Grid item xs={12} sm={4} key={button.path}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s',
+                  '&:hover': {
+                    transform: 'scale(1.02)'
+                  }
+                }}
+                onClick={() => handleNavigate(button.path)}
+              >
+                <CardContent sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  p: 3,
+                  backgroundColor: button.color,
+                  color: 'white'
+                }}>
+                  {button.icon}
+                  <Typography variant="h5" component="div" sx={{ mt: 2 }}>
+                    {button.title}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
       <Grid container spacing={2}>
         <Grid item xs={12} className={styles.dashboardHeader}>
           <h2>לוח בקרה</h2>
