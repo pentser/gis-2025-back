@@ -5,6 +5,8 @@
   width: 100%;
   direction: rtl;
   position: relative;
+  gap: 20px;
+  height: 100%;
 }
 
 ._map_13tqv_281 {
@@ -22,11 +24,150 @@
 }
 
 .map-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px);
+  gap: 20px;
+  padding: 20px;
+}
+
+.map-content {
+  display: flex;
   flex: 1;
-  height: 800px !important;
-  min-height: 800px !important;
-  overflow: hidden;
+  gap: 20px;
+  min-height: 500px;
+}
+
+/* סרגל הסינון מימין */
+.filter-section {
+  width: 280px;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   position: relative;
+  z-index: 2;
+}
+
+/* המפה משמאל */
+.map-section {
+  flex: 1;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 1;
+}
+
+/* סטטיסטיקות למטה */
+.stats-section {
+  height: 80px;
+  background: white;
+  border-radius: 8px;
+  padding: 15px 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1976d2;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+}
+
+/* עיצוב הפילטרים */
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  position: relative;
+  z-index: 1000;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-panel h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: bold;
+}
+
+.filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 1000;
+}
+
+.filter-panel label {
+  position: relative;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.filter-panel input[type="checkbox"] {
+  position: relative;
+  z-index: 1000;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* וידוא שהמפה תופסת את כל הגובה הזמין */
+.map-view {
+  height: 100%;
+  width: 100%;
+}
+
+/* מקרא */
+.map-legend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 1000;
+  font-size: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.1);
 }
 
 .loading-container {
@@ -74,18 +215,19 @@
 }
 
 .address-button {
-  padding: 8px 12px;
-  background-color: #1A365D;
+  padding: 8px 16px;
+  background-color: #1976d2;
   color: white;
   border: none;
   border-radius: 0 4px 4px 0;
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.2s;
+  z-index: 1000;
 }
 
 .address-button:hover {
-  background-color: #0f2a4a;
+  background-color: #1565c0;
 }
 
 .address-button:disabled {
@@ -98,27 +240,24 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  background-color: #4A90E2;
+  padding: 8px 16px;
+  background-color: #2196f3;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.2s, transform 0.1s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s;
+  width: 100%;
+  z-index: 1000;
 }
 
 .gps-button:hover {
-  background-color: #3A80D2;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.25);
+  background-color: #1976d2;
 }
 
 .gps-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background-color: #1565c0;
 }
 
 .gps-button svg {
@@ -146,10 +285,7 @@
   flex: 1;
   display: flex; 
   flex-direction: column;
-}
-
-.filter-section {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .filter-section:last-child {
@@ -229,53 +365,10 @@
   margin: 0 auto;
 }
 
-.stat-item {
-  text-align: center;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.stat-value {
-  display: block;
-  font-size: 24px;
-  font-weight: bold;
-  color: #2980b9;
-}
-
-.stat-label {
-  display: block;
-  font-size: 14px;
-  color: #666;
-  margin-top: 5px;
-}
-
-.map-legend {
-  padding: 15px;
-  background-color: #fff;
-  border-top: 1px solid #ddd;
-  flex: 0 0 auto;
-}
-
 .map-legend h3 {
   margin: 0 0 10px 0;
   color: #333;
   font-size: 18px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.legend-icon {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  margin-left: 10px;
-  border: 1px solid white;
-  box-shadow: 0 0 3px rgba(0,0,0,0.2);
 }
 
 /* Popup styles */
@@ -367,4 +460,61 @@
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.map-sidebar {
+  width: 250px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-panel h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #333;
+}
+
+.filter-options, .filter-urgency {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-urgency h4 {
+  margin: 10px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.filter-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.filter-panel input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.map-view {
+  flex: 1;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.custom-div-icon {
+  background: none !important;
+  border: none !important;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 8px;
+  z-index: 1;
 } 

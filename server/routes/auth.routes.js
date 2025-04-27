@@ -11,7 +11,9 @@ router.post('/register', register);
 router.post('/login', login);
 
 // נתיב לאימות טוקן
-router.get('/validate', auth, validate);
+router.get('/validate', auth, (req, res) => {
+  res.json({ valid: true });
+});
 
 // נתיב לקבלת פרטי משתמש
 router.get('/me', auth, getMe);

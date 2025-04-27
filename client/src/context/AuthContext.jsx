@@ -17,20 +17,42 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  // פונקציה לבדיקת תקינות הטוקן
+  const validateToken = async () => {
     const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        console.error('שגיאה בטעינת נתוני משתמש:', e);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/validate`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Token invalid');
+      }
+
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+    } catch (error) {
+      console.error('Token validation error:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    validateToken();
   }, []);
 
   const register = async (userData) => {
@@ -99,7 +121,8 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
-    setError
+    setError,
+    validateToken
   };
 
   if (error) {
@@ -138,7 +161,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

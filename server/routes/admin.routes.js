@@ -39,33 +39,134 @@ router.get('/volunteers', [auth, isAdmin], async (req, res) => {
 router.get('/map', auth, isAdmin, async (req, res) => {
   try {
     // שליפת כל הקשישים
-    const elderly = await Elderly.find({}).select('firstName lastName address location status');
+    const elderly = await Elderly.find({})
+      .select('firstName lastName address location status');
     
     // שליפת כל המתנדבים
     const volunteers = await User.find({ role: 'volunteer' })
       .select('firstName lastName location status');
 
+    console.log('Found elderly:', elderly.length);
+    console.log('Found volunteers:', volunteers.length);
+
+    // חישוב דחיפות לכל הקשישים ועיבוד הקואורדינטות
+    const elderlyWithUrgency = await Promise.all(
+      elderly.map(async (elder) => {
+        const elderObj = elder.toObject();
+        
+        // בדיקה שיש מיקום תקין
+        let location = null;
+        if (elderObj.location && 
+            elderObj.location.type === 'Point' && 
+            Array.isArray(elderObj.location.coordinates) && 
+            elderObj.location.coordinates.length === 2) {
+          // המרה מ-[longitude, latitude] ל-[latitude, longitude]
+          location = [elderObj.location.coordinates[1], elderObj.location.coordinates[0]];
+          console.log(`Valid location found for elderly ${elderObj._id}:`, location);
+        } else {
+          console.log(`Invalid location for elderly ${elderObj._id}:`, elderObj.location);
+        }
+
+        const urgency = await calculateUrgency(elder);
+        
+        return {
+          ...elderObj,
+          location,
+          urgency
+        };
+      })
+    );
+
+    // עיבוד נתוני המתנדבים והקואורדינטות שלהם
+    const processedVolunteers = volunteers.map(volunteer => {
+      const volunteerObj = volunteer.toObject();
+      
+      // בדיקה שיש מיקום תקין
+      let location = null;
+      if (volunteerObj.location && 
+          volunteerObj.location.type === 'Point' && 
+          Array.isArray(volunteerObj.location.coordinates) && 
+          volunteerObj.location.coordinates.length === 2) {
+        // המרה מ-[longitude, latitude] ל-[latitude, longitude]
+        location = [volunteerObj.location.coordinates[1], volunteerObj.location.coordinates[0]];
+        console.log(`Valid location found for volunteer ${volunteerObj._id}:`, location);
+      } else {
+        console.log(`Invalid location for volunteer ${volunteerObj._id}:`, volunteerObj.location);
+      }
+
+      return {
+        ...volunteerObj,
+        location
+      };
+    });
+
+    // הדפסת סיכום
+    console.log('Summary:', {
+      totalElderly: elderly.length,
+      elderlyWithLocation: elderlyWithUrgency.filter(e => e.location).length,
+      totalVolunteers: volunteers.length,
+      volunteersWithLocation: processedVolunteers.filter(v => v.location).length
+    });
+
+    // הדפסת דוגמה של קשיש ומתנדב ראשונים עם המיקומים שלהם
+    if (elderlyWithUrgency.length > 0) {
+      const firstElder = elderlyWithUrgency[0];
+      console.log('Sample elderly:', {
+        id: firstElder._id,
+        name: `${firstElder.firstName} ${firstElder.lastName}`,
+        location: firstElder.location,
+        originalLocation: elderly[0].location,
+        urgency: firstElder.urgency
+      });
+    }
+
+    if (processedVolunteers.length > 0) {
+      const firstVolunteer = processedVolunteers[0];
+      console.log('Sample volunteer:', {
+        id: firstVolunteer._id,
+        name: `${firstVolunteer.firstName} ${firstVolunteer.lastName}`,
+        location: firstVolunteer.location,
+        originalLocation: volunteers[0].location
+      });
+    }
+
     res.json({
-      elderly: elderly.map(elder => ({
-        ...elder.toObject(),
-        urgency: calculateUrgency(elder) // פונקציית עזר לחישוב דחיפות
-      })),
-      volunteers: volunteers.map(volunteer => ({
-        ...volunteer.toObject(),
-        // אפשר להוסיף כאן מידע נוסף על המתנדב
-      }))
+      elderly: elderlyWithUrgency,
+      volunteers: processedVolunteers
     });
   } catch (error) {
     console.error('שגיאה בשליפת נתוני מפת אדמין:', error);
+    console.error(error.stack);
     res.status(500).json({ message: 'שגיאה בשליפת נתוני המפה' });
   }
 });
 
 // פונקציית עזר לחישוב דחיפות הביקור
-const calculateUrgency = (elder) => {
-  // כאן תוכל להוסיף לוגיקה לחישוב דחיפות הביקור
-  // לדוגמה: על סמך תאריך הביקור האחרון
-  return 'medium'; // ערך ברירת מחדל
+const calculateUrgency = async (elder) => {
+  try {
+    // מצא את הביקור האחרון של הקשיש
+    const lastVisit = await Visit.findOne({ 
+      elder: elder._id,
+      status: 'completed'
+    })
+    .sort({ date: -1 })
+    .lean();
+
+    if (!lastVisit) {
+      return 'high'; // אם אין ביקורים, דחיפות גבוהה
+    }
+
+    const daysSinceLastVisit = Math.floor(
+      (new Date() - new Date(lastVisit.date)) / (1000 * 60 * 60 * 24)
+    );
+
+    if (daysSinceLastVisit > 21) return 'high';
+    if (daysSinceLastVisit > 14) return 'medium';
+    return 'low';
+  } catch (error) {
+    console.error('שגיאה בחישוב דחיפות:', error);
+    return 'medium'; // ברירת מחדל במקרה של שגיאה
+  }
 };
 
 router.get('/dashboard', auth, isAdmin, async (req, res) => {

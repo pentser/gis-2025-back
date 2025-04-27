@@ -50,31 +50,40 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
 
-      const [dashboardResponse, mapResponse] = await Promise.all([
-        fetchAdminDashboard(),
-        fetchAdminMap()
-      ]);
+      if (!user) {
+        throw new Error('נדרשת התחברות');
+      }
+      
+      if (user.role !== 'admin') {
+        throw new Error('אין לך הרשאות לצפות בדף זה');
+      }
 
+      const dashboardResponse = await fetchAdminDashboard();
       console.log('Dashboard Response:', dashboardResponse);
-      console.log('Map Response:', mapResponse);
 
-      // עיבוד נתוני המפה
+      let mapData = { elderly: [], volunteers: [] };
+      try {
+        const mapResponse = await fetchAdminMap();
+        console.log('Map Response:', mapResponse);
+        mapData = mapResponse;
+      } catch (mapError) {
+        console.error('שגיאה בטעינת נתוני מפה:', mapError);
+      }
+
       const processedMapData = {
-        elderly: mapResponse.elderly.map(elder => ({
+        elderly: (mapData.elderly || []).map(elder => ({
           ...elder,
           location: elder.location?.coordinates 
             ? [elder.location.coordinates[1], elder.location.coordinates[0]]
             : null
         })).filter(elder => elder.location),
-        volunteers: mapResponse.volunteers.map(volunteer => ({
+        volunteers: (mapData.volunteers || []).map(volunteer => ({
           ...volunteer,
           location: volunteer.location?.coordinates 
             ? [volunteer.location.coordinates[1], volunteer.location.coordinates[0]]
             : null
         })).filter(volunteer => volunteer.location)
       };
-
-      console.log('Processed Map Data:', processedMapData);
 
       setDashboardData({
         ...dashboardResponse,
@@ -83,22 +92,18 @@ const Dashboard = () => {
     } catch (err) {
       console.error('שגיאה בטעינת נתונים:', err);
       setError(err.message);
-      if (err.message.includes('התחברות מחדש')) {
+      
+      if (err.message.includes('התחברות') || err.message.includes('הרשאות')) {
         navigate('/login');
       }
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [user, navigate]);
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
-      navigate('/login');
-      return;
-    }
-
     fetchDashboardData();
-  }, [user, navigate, fetchDashboardData]);
+  }, [fetchDashboardData]);
 
   const navigationButtons = [
     {

@@ -105,6 +105,7 @@ const App = () => {
                 <Route path="elderly/:id" element={<ElderlyPage />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="adminvolunteers" element={<AdminVolunteers />} />
+                <Route path="profile" element={<Profile />} />
                 <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
               </Route>
 

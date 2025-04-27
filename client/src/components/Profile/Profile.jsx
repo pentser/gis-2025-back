@@ -1,152 +1,156 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
-  Paper,
+  Box,
+  Card,
+  CardContent,
   Typography,
   TextField,
   Button,
   Grid,
-  Avatar,
-  Box
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
-import styles from './Profile.module.css';
+import { fetchWithAuth } from '../../services/api';
 
 const Profile = () => {
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    role: ''
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    address: user?.address || ''
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        role: user.role || ''
-      });
-    }
-  }, [user]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
 
     try {
-      await updateProfile(formData);
-      setSuccess('הפרופיל עודכן בהצלחה');
+      const response = await fetchWithAuth('/api/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(formData)
+      });
+
+      setSuccess(true);
+      // עדכון המשתמש בקונטקסט אם צריך
     } catch (err) {
-      setError('שגיאה בעדכון הפרופיל');
+      setError(err.message || 'שגיאה בעדכון הפרופיל');
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Container className={styles.container}>
-      <Paper className={styles.paper}>
-        <Box className={styles.header}>
-          <Avatar className={styles.avatar}>
-            {formData.firstName?.charAt(0)}{formData.lastName?.charAt(0)}
-          </Avatar>
-          <Typography component="h1" variant="h5">
-            הפרופיל שלי
-          </Typography>
-        </Box>
+    <Box sx={{ p: 3, maxWidth: 600, margin: '0 auto' }}>
+      <Typography variant="h5" gutterBottom>
+        הפרופיל שלי
+      </Typography>
 
-        {error && (
-          <Typography color="error" className={styles.message}>
-            {error}
-          </Typography>
-        )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-        {success && (
-          <Typography color="success" className={styles.message}>
-            {success}
-          </Typography>
-        )}
+      {success && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          הפרופיל עודכן בהצלחה
+        </Alert>
+      )}
 
-        <form onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                required
-                fullWidth
-                label="שם פרטי"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-              />
+      <Card>
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="שם פרטי"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="שם משפחה"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="אימייל"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="טלפון"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="כתובת"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={loading}
+                  fullWidth
+                >
+                  עדכן פרופיל
+                </Button>
+              </Grid>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                required
-                fullWidth
-                label="שם משפחה"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="דואר אלקטרוני"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                disabled
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="טלפון"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="תפקיד"
-                value={formData.role === 'admin' ? 'מנהל' : 'משתמש'}
-                disabled
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                className={styles.submit}
-              >
-                עדכן פרופיל
-              </Button>
-            </Grid>
-          </Grid>
-        </form>
-      </Paper>
-    </Container>
+          </form>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

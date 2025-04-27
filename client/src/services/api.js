@@ -236,4 +236,29 @@ export const fetchAdminVolunteers = () => fetchWithAuth('/api/admin/volunteers')
 export const fetchAdminMapData = () => fetchWithAuth('/api/admin/map');
 
 export const fetchAdminDashboard = () => fetchWithAuth('/api/admin/dashboard');
-export const fetchAdminMap = () => fetchWithAuth('/api/admin/map'); 
+
+export const fetchAdminMap = async () => {
+  try {
+    console.log('Fetching admin map data...');
+    const data = await fetchWithAuth('/api/admin/map');
+    console.log('Admin map data received:', data);
+    
+    // וידוא שהנתונים בפורמט הנכון
+    if (!data || (!data.elderly && !data.mapData?.elderly)) {
+      console.error('Invalid data format received:', data);
+      throw new Error('התקבלו נתונים לא תקינים מהשרת');
+    }
+
+    // המרת הנתונים לפורמט אחיד
+    const formattedData = {
+      elderly: data.elderly || data.mapData?.elderly || [],
+      volunteers: data.volunteers || data.mapData?.volunteers || []
+    };
+
+    console.log('Formatted map data:', formattedData);
+    return formattedData;
+  } catch (error) {
+    console.error('Error fetching admin map data:', error);
+    throw error;
+  }
+}; 
