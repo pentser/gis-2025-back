@@ -215,7 +215,7 @@ const FilterPanel = ({ filters, setFilters }) => {
         <input
           type="range"
           min="1"
-          max="20"
+          max="300"
           value={filters.radius}
           onChange={(e) => setFilters({ ...filters, radius: e.target.value })}
         />

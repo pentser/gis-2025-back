@@ -52,7 +52,7 @@ const Dashboard = () => {
 
   return (
     <div className={styles.dashboard}>
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         <Grid item xs={12} className={styles.dashboardHeader}>
           <h2>לוח בקרה</h2>
           <Button 
@@ -66,54 +66,55 @@ const Dashboard = () => {
           </Button>
         </Grid>
 
-        <Grid item xs={12} md={4}>
-          <Grid container spacing={3} className={styles.statsGrid}>
-            <Grid item xs={12}>
-              <Card className={styles.statsCard}>
+        {/* Stats Cards Row */}
+        <Grid item xs={12}>
+          <Grid container spacing={2} className={styles.statsRow}>
+            <Grid item xs={6} sm={3}>
+              <Card className={styles.miniStatsCard}>
                 <CardContent>
-                  <Typography variant="h6" component="h3">
+                  <Typography variant="subtitle2" component="h3">
                     סה"כ ביקורים
                   </Typography>
-                  <Typography variant="h4" component="p">
+                  <Typography variant="h6" component="p">
                     {stats?.totalVisits || 0}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
 
-            <Grid item xs={12}>
-              <Card className={styles.statsCard}>
+            <Grid item xs={6} sm={3}>
+              <Card className={styles.miniStatsCard}>
                 <CardContent>
-                  <Typography variant="h6" component="h3">
+                  <Typography variant="subtitle2" component="h3">
                     קשישים פעילים
                   </Typography>
-                  <Typography variant="h4" component="p">
+                  <Typography variant="h6" component="p">
                     {stats?.uniqueEldersCount || 0}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
 
-            <Grid item xs={12}>
-              <Card className={styles.statsCard}>
+            <Grid item xs={6} sm={3}>
+              <Card className={styles.miniStatsCard}>
                 <CardContent>
-                  <Typography variant="h6" component="h3">
+                  <Typography variant="subtitle2" component="h3">
                     ממוצע משך ביקור
                   </Typography>
-                  <Typography variant="h4" component="p">
-                    {stats?.averageVisitLength ? `${Math.round(stats.averageVisitLength)} דקות` : 'אין מידע'}
+                  <Typography variant="h6" component="p">
+                    {stats?.averageVisitLength ? `${Math.round(stats.averageVisitLength)} דק'` : '-'}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
 
-            <Grid item xs={12}>
-              <Card className={styles.statsCard}>
+            <Grid item xs={6} sm={3}>
+              <Card className={styles.miniStatsCard}>
                 <CardContent>
-                  <Typography variant="h6" component="h3">
+                  <Typography variant="subtitle2" component="h3">
                     ביקורים השבוע
                   </Typography>
-                  <Typography variant="h4" component="p">
+                  <Typography variant="h6" component="p">
                     {stats?.visitsThisWeek || 0}
                   </Typography>
                 </CardContent>
@@ -122,7 +123,8 @@ const Dashboard = () => {
           </Grid>
         </Grid>
 
-        <Grid item xs={12} md={8}>
+        {/* Map Section */}
+        <Grid item xs={12}>
           <Card className={styles.mapCard}>
             <CardContent>
               <MapView />
@@ -130,6 +132,7 @@ const Dashboard = () => {
           </Card>
         </Grid>
 
+        {/* Urgent Visits Table */}
         <Grid item xs={12}>
           <div className={styles.section}>
             <h3>קשישים הדורשים ביקור דחוף</h3>
@@ -156,12 +159,14 @@ const Dashboard = () => {
                       </TableCell>
                       <TableCell>{visit.daysSinceLastVisit}</TableCell>
                       <TableCell>
-                        <button
-                          className="button button-primary"
-                          onClick={() => window.location.href = `/visits/new?elderId=${visit.elder._id}`}
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          size="small"
+                          href={`/visits/new?elderId=${visit.elder._id}`}
                         >
                           דווח ביקור
-                        </button>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

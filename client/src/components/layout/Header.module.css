@@ -1,0 +1,22 @@
+.header {
+  direction: rtl;
+}
+
+/* אנימציה לאייקון הלב */
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* הוספת אנימציה בהובר */
+.header :global(.MuiIconButton-root:hover) svg {
+  animation: heartBeat 0.8s infinite;
+  color: #ff4081;
+} 

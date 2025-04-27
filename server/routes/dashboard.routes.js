@@ -63,12 +63,15 @@ router.get('/map', async (req, res) => {
         query: req.query
       });
     }
+
+    // וידוא שהרדיוס בטווח תקין
+    const validRadius = Math.min(Math.max(parseFloat(radius), 1), 300);
     
     // המרת הרדיוס לרדיאנים (1 ק"מ = ~0.0089 מעלות)
-    const radiusInDegrees = radius * 0.0089;
+    const radiusInDegrees = validRadius * 0.0089;
     
     // תיעוד במסד הנתונים
-    console.log(`מחפש נתונים במיקום: [${lat}, ${lng}] עם רדיוס ${radius} ק"מ`);
+    console.log(`מחפש נתונים במיקום: [${lat}, ${lng}] עם רדיוס ${validRadius} ק"מ`);
     
     try {
       // מציאת זקנים באזור

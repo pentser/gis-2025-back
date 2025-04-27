@@ -12,7 +12,8 @@ import {
   Select,
   MenuItem,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Autocomplete
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -20,18 +21,21 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { he } from 'date-fns/locale';
 import { fetchVisitById, createVisit, updateVisit, fetchElderly, fetchVolunteers } from '../../services/api';
 import styles from './VisitForm.module.css';
+import { useAuth } from '../../context/AuthContext';
 
 const VisitForm = () => {
+  const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const elderId = queryParams.get('elderId');
+  const dateTime = queryParams.get('dateTime');
 
   const [formData, setFormData] = useState({
     elder: elderId || '',
-    volunteer: '',
-    date: new Date(),
+    volunteer: user?._id || '',
+    date: dateTime ? new Date(dateTime) : new Date(),
     duration: 30,
     notes: '',
     status: 'scheduled'
@@ -42,6 +46,7 @@ const VisitForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [selectedElderly, setSelectedElderly] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,11 +56,33 @@ const VisitForm = () => {
 
         // טעינת רשימת הקשישים
         const elderlyData = await fetchElderly();
-        setElderly(elderlyData);
+        
+        // סינון כפילויות לפי ID
+        const uniqueElderly = elderlyData.reduce((acc, current) => {
+          const x = acc.find(item => item._id === current._id);
+          if (!x) {
+            return acc.concat([current]);
+          } else {
+            return acc;
+          }
+        }, []);
 
-        // טעינת רשימת המתנדבים
-        const volunteersData = await fetchVolunteers();
-        setVolunteers(volunteersData);
+        // מיון לפי שם פרטי ושם משפחה
+        uniqueElderly.sort((a, b) => {
+          const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
+          const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+
+        setElderly(uniqueElderly);
+
+        // אם יש elderId, מצא את הקשיש המתאים
+        if (elderId) {
+          const found = uniqueElderly.find(e => e._id === elderId);
+          if (found) {
+            setSelectedElderly(found);
+          }
+        }
 
         // אם יש ID, טען את פרטי הביקור
         if (id) {
@@ -68,6 +95,10 @@ const VisitForm = () => {
             notes: visitData.notes,
             status: visitData.status
           });
+          const elderlyFound = uniqueElderly.find(e => e._id === visitData.elder);
+          if (elderlyFound) {
+            setSelectedElderly(elderlyFound);
+          }
         }
       } catch (err) {
         console.error('שגיאה בטעינת נתונים:', err);
@@ -78,7 +109,7 @@ const VisitForm = () => {
     };
 
     loadData();
-  }, [id]);
+  }, [id, elderId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,8 +119,10 @@ const VisitForm = () => {
 
       const visitData = {
         ...formData,
+        elder: selectedElderly._id,
         date: formData.date.toISOString(),
-        duration: parseInt(formData.duration)
+        duration: parseInt(formData.duration),
+        volunteer: user.role === 'volunteer' ? user._id : formData.volunteer
       };
 
       console.log('שולח נתוני ביקור:', visitData);
@@ -102,7 +135,7 @@ const VisitForm = () => {
 
       setSuccess(true);
       setTimeout(() => {
-        navigate('/app/visits');
+        navigate('/app/myvisits');
       }, 1500);
     } catch (err) {
       console.error('שגיאה בשמירת ביקור:', err);
@@ -134,7 +167,7 @@ const VisitForm = () => {
     <Container className={styles.container}>
       <Paper className={styles.paper}>
         <Typography variant="h5" component="h1" gutterBottom>
-          {id ? 'עריכת ביקור' : 'ביקור חדש'}
+          {id ? 'עדכון ביקור' : 'דיווח/עדכון ביקור'}
         </Typography>
 
         {error && (
@@ -145,46 +178,52 @@ const VisitForm = () => {
 
         {success && (
           <Alert severity="success" className={styles.alert}>
-            {id ? 'הביקור עודכן בהצלחה' : 'הביקור נוצר בהצלחה'}
+            הביקור נשמר בהצלחה
           </Alert>
         )}
 
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>מתנדב</InputLabel>
-                <Select
-                  name="volunteer"
-                  value={formData.volunteer}
-                  onChange={handleChange}
-                  required
-                >
-                  {volunteers.map((volunteer) => (
-                    <MenuItem key={volunteer._id} value={volunteer._id}>
-                      {volunteer.firstName} {volunteer.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            {user && user.role === 'admin' && (
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>מתנדב</InputLabel>
+                  <Select
+                    name="volunteer"
+                    value={formData.volunteer}
+                    onChange={handleChange}
+                    required
+                  >
+                    {volunteers.map((volunteer) => (
+                      <MenuItem key={volunteer._id} value={volunteer._id}>
+                        {volunteer.firstName} {volunteer.lastName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
 
             <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>קשיש</InputLabel>
-                <Select
-                  name="elder"
-                  value={formData.elder}
-                  onChange={handleChange}
-                  required
-                >
-                  {elderly.map((elder) => (
-                    <MenuItem key={elder._id} value={elder._id}>
-                      {elder.firstName} {elder.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                options={elderly}
+                getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
+                value={selectedElderly}
+                onChange={(event, newValue) => {
+                  setSelectedElderly(newValue);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="קשיש"
+                    required
+                    InputLabelProps={{
+                      sx: { backgroundColor: 'white', px: 1 }
+                    }}
+                  />
+                )}
+                isOptionEqualToValue={(option, value) => option._id === value?._id}
+              />
             </Grid>
 
             <Grid item xs={12}>
@@ -199,7 +238,16 @@ const VisitForm = () => {
                     }));
                   }}
                   slots={{
-                    textField: (params) => <TextField {...params} fullWidth required />
+                    textField: (params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        required
+                        InputLabelProps={{
+                          sx: { backgroundColor: 'white', px: 1 }
+                        }}
+                      />
+                    )
                   }}
                 />
               </LocalizationProvider>
@@ -212,19 +260,22 @@ const VisitForm = () => {
                 name="duration"
                 type="number"
                 value={formData.duration}
-                onChange={handleChange}
+                onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
                 required
                 inputProps={{ min: 1 }}
+                InputLabelProps={{
+                  sx: { backgroundColor: 'white', px: 1 }
+                }}
               />
             </Grid>
 
             <Grid item xs={12}>
               <FormControl fullWidth>
-                <InputLabel>סטטוס</InputLabel>
+                <InputLabel sx={{ backgroundColor: 'white', px: 1 }}>סטטוס</InputLabel>
                 <Select
                   name="status"
                   value={formData.status}
-                  onChange={handleChange}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
                   required
                 >
                   <MenuItem value="scheduled">מתוכנן</MenuItem>
@@ -236,13 +287,18 @@ const VisitForm = () => {
 
             <Grid item xs={12}>
               <TextField
-                fullWidth
-                label="הערות"
                 name="notes"
+                label="הערות"
                 multiline
                 rows={4}
                 value={formData.notes}
-                onChange={handleChange}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                fullWidth
+                inputProps={{ maxLength: 500 }}
+                helperText={`${formData.notes.length}/500`}
+                InputLabelProps={{
+                  sx: { backgroundColor: 'white', px: 1 }
+                }}
               />
             </Grid>
 
@@ -254,12 +310,12 @@ const VisitForm = () => {
                   color="primary"
                   disabled={loading}
                 >
-                  {id ? 'עדכן ביקור' : 'צור ביקור'}
+                  עדכן ביקור
                 </Button>
                 <Button
                   type="button"
                   variant="outlined"
-                  onClick={() => navigate('/app/visits')}
+                  onClick={() => navigate('/app/myvisits')}
                   disabled={loading}
                 >
                   ביטול
