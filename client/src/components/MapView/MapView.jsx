@@ -9,6 +9,7 @@ import { fetchAdminMap, fetchMapData } from '../../services/api';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
 
 // יצירת אייקון מותאם אישית
 const createElderlyIcon = (urgency) => {
@@ -117,7 +118,8 @@ const FilterPanel = ({ onFilterChange }) => {
   const [filters, setFilters] = useState({
     showElderly: true,
     showVolunteers: true,
-    urgencyLevel: 'all'
+    urgencyLevel: 'all',
+    searchQuery: ''
   });
 
   const handleFilterChange = (newFilters) => {
@@ -129,6 +131,13 @@ const FilterPanel = ({ onFilterChange }) => {
   return (
     <div className="filter-panel">
       <div className="filter-options">
+        <TextField
+          size="small"
+          placeholder="חיפוש לפי שם..."
+          value={filters.searchQuery}
+          onChange={(e) => handleFilterChange({ searchQuery: e.target.value })}
+          className="search-input"
+        />
         <label>
           <input
             type="checkbox"
@@ -274,7 +283,8 @@ const MapView = ({ data }) => {
   const [filters, setFilters] = useState({
     showElderly: true,
     showVolunteers: true,
-    urgencyLevel: 'all'
+    urgencyLevel: 'all',
+    searchQuery: ''
   });
   
   // פונקציה לטעינת נתוני המפה
@@ -304,10 +314,17 @@ const MapView = ({ data }) => {
     loadMapData();
   }, []);
 
+  // פונקציה לסינון לפי טקסט חיפוש
+  const filterBySearch = (item) => {
+    if (!filters.searchQuery) return true;
+    const searchLower = filters.searchQuery.toLowerCase();
+    const fullName = `${item.firstName || ''} ${item.lastName || ''}`.toLowerCase();
+    return fullName.includes(searchLower);
+  };
+
   // סינון וחישוב הנקודות למפה
   const points = useMemo(() => {
     console.log('Calculating map points with filters:', filters);
-    console.log('Current mapData:', mapData);
     
     const result = {
       elderly: [],
@@ -316,6 +333,7 @@ const MapView = ({ data }) => {
 
     if (filters.showElderly && mapData.elderly) {
       result.elderly = mapData.elderly
+        .filter(filterBySearch)
         .map(elder => {
           const coords = normalizeCoordinates(elder.location);
           if (!coords) {
@@ -333,6 +351,7 @@ const MapView = ({ data }) => {
 
     if (filters.showVolunteers && mapData.volunteers) {
       result.volunteers = mapData.volunteers
+        .filter(filterBySearch)
         .map(volunteer => {
           const coords = normalizeCoordinates(volunteer.location);
           if (!coords) {
@@ -344,7 +363,6 @@ const MapView = ({ data }) => {
         .filter(Boolean);
     }
 
-    console.log('Calculated points:', result);
     return result;
   }, [mapData, filters]);
 
@@ -363,47 +381,70 @@ const MapView = ({ data }) => {
 
   return (
     <div className="map-container">
-      <div className="map-and-filters">
-        <div className="filter-section">
-          <LocationSelector onLocationSelect={(location) => {
-            setCenter(location);
-            loadMapData(location);
-          }} />
-          <FilterPanel onFilterChange={setFilters} />
-        </div>
-        <div className="map-section">
-          <MapContainer
-            center={center}
-            zoom={13}
-            style={{ height: '100%', width: '100%' }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-            <MapUpdater center={center} />
-            
-            {points.elderly.map((elder, index) => (
-              <Marker
-                key={`elderly-${elder._id || index}`}
-                position={elder.coordinates}
-                icon={createElderlyIcon(elder.urgency)}
-                title={elder.name}
-              />
-            ))}
-            
-            {points.volunteers.map((volunteer, index) => (
-              <Marker
-                key={`volunteer-${volunteer._id || index}`}
-                position={volunteer.coordinates}
-                icon={createVolunteerIcon()}
-                title={volunteer.name}
-              />
-            ))}
-            
-            <MapLegend />
-          </MapContainer>
-        </div>
+      <div className="filter-section">
+        <LocationSelector onLocationSelect={(location) => {
+          setCenter(location);
+          loadMapData(location);
+        }} />
+        <FilterPanel onFilterChange={setFilters} />
+      </div>
+      
+      <div className="map-section">
+        <MapContainer
+          center={center}
+          zoom={13}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <MapUpdater center={center} />
+          
+          {points.elderly.map((elder, index) => (
+            <Marker
+              key={`elderly-${elder._id || index}`}
+              position={elder.coordinates}
+              icon={createElderlyIcon(elder.urgency)}
+            >
+              <Popup>
+                <div className="popup-content">
+                  <h3>{elder.firstName} {elder.lastName}</h3>
+                  <p><strong>כתובת:</strong> {elder.address}</p>
+                  <p><strong>טלפון:</strong> {elder.phone}</p>
+                  <p><strong>דחיפות:</strong> {
+                    elder.urgency === 'high' ? 'גבוהה' :
+                    elder.urgency === 'medium' ? 'בינונית' : 'נמוכה'
+                  }</p>
+                  {elder.lastVisit && (
+                    <p><strong>ביקור אחרון:</strong> {new Date(elder.lastVisit).toLocaleDateString('he-IL')}</p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+          
+          {points.volunteers.map((volunteer, index) => (
+            <Marker
+              key={`volunteer-${volunteer._id || index}`}
+              position={volunteer.coordinates}
+              icon={createVolunteerIcon()}
+            >
+              <Popup>
+                <div className="popup-content">
+                  <h3>{volunteer.firstName} {volunteer.lastName}</h3>
+                  <p><strong>כתובת:</strong> {volunteer.address}</p>
+                  <p><strong>טלפון:</strong> {volunteer.phone}</p>
+                  {volunteer.availability && (
+                    <p><strong>זמינות:</strong> {volunteer.availability}</p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+          
+          <MapLegend />
+        </MapContainer>
       </div>
       
       <div className="stats-section">
@@ -423,7 +464,9 @@ const MapView = ({ data }) => {
         </div>
         <div className="stat-item">
           <span className="stat-value">
-            {points.elderly.reduce((sum, elder) => sum + elder.distanceFromCurrentLocation, 0).toFixed(1)}
+            {points.elderly.reduce((sum, elder) => 
+              elder.distanceFromCurrentLocation ? sum + elder.distanceFromCurrentLocation : sum, 0
+            ).toFixed(1)}
           </span>
           <span className="stat-label">מרחק ממוצע (ק"מ)</span>
         </div>
