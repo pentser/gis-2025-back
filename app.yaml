@@ -4,12 +4,14 @@ services:
   github:
     branch: main
     deploy_on_push: true
-    repo: your-username/gis-2025-back
+    repo: elipe/gis-2025-back
   dockerfile_path: server/Dockerfile
   http_port: 5000
   instance_count: 1
   instance_size_slug: basic-xxs
   run_command: node server.js
+  health_check_path: /
+  health_check_interval: 30s
   envs:
   - key: NODE_ENV
     value: production
@@ -24,12 +26,14 @@ services:
   github:
     branch: main
     deploy_on_push: true
-    repo: your-username/gis-2025-back
+    repo: elipe/gis-2025-back
   dockerfile_path: client/Dockerfile
   http_port: 80
   instance_count: 1
   instance_size_slug: basic-xxs
   run_command: nginx -g 'daemon off;'
+  health_check_path: /
+  health_check_interval: 30s
   envs:
   - key: VITE_API_URL
     value: https://${DOMAIN}/api 
