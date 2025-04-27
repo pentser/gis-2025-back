@@ -4,6 +4,8 @@ import styles from './LandingPage.module.css';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LoginIcon from '@mui/icons-material/Login';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -14,61 +16,57 @@ const LandingPage = () => {
 
   return (
     <div className={styles.container}>
-      <h1>לב לקשיש ❤️</h1>
-      <div className={styles.undermaintytle}>
-        <div className={styles.content}>
-          <h4 className={styles.sectionTitle}>מגפת הבדידות בקרב קשישים</h4>
-          <p className={styles.paragraph}>
-            בישראל מעל 1.1 מיליון מבוגרים בני 65 ומעלה; כ־30% מהם בודדים, עריריים וללא קרובי משפחה.
-            מאות אלפי קשישים סובלים מבדידות קשה, ומאות מהם נפטרים בביתם מבלי שאיש ידע על כך בזמן אמת 
-            
-            עמותת לב לקשיש הוקמה בשנת 2021 במטרה לתמוך בקשישים בודדים
-            ולחבר בין מתנדבים חמים לקשישים עריריים, במטרה לתת להם תחושת משמעות ואכפתיות.
-          </p>
-        </div>
-
-        <div className={styles.optionsContainer}>
-          <div className={styles.optionCard}>
-            <div className={styles.iconContainer}>
-              <VolunteerActivismIcon className={styles.icon} />
-            </div>
-            <h4>מתנדב חדש?</h4>
-            <p>הצטרפו למערכת כמתנדבים ותוכלו לראות את הקשישים באזור שלכם, לתאם ביקורים ולעקוב אחר הפעילות שלכם.</p>
-            <button 
-              onClick={() => navigate('/register')} 
-              className={styles.actionButton}
+      <AppBar position="static" className={styles.header}>
+        <Toolbar>
+          <Box className={styles.logoContainer}>
+            <Typography variant="h6" component="div" className={styles.logoText}>
+              לב לקשיש
+            </Typography>
+            <FavoriteIcon className={styles.heartIcon} />
+          </Box>
+          
+          <Box sx={{ flexGrow: 1 }} className={styles.navButtons}>
+            <Button 
+              color="inherit" 
+              onClick={() => navigate('/register')}
+              className={styles.navButton}
             >
               הרשמה כמתנדב
-            </button>
-          </div>
-
-          <div className={styles.optionCard}>
-            <div className={styles.iconContainer}>
-              <AdminPanelSettingsIcon className={styles.icon} />
-            </div>
-            <h4>מנהל מערכת?</h4>
-            <p>התחברו למערכת כמנהלים כדי לנהל את המתנדבים והקשישים, לעקוב אחר הביקורים ולנהל את המערכת.</p>
-            <button 
-              onClick={() => navigate('/login?role=admin')} 
-              className={styles.actionButton}
+            </Button>
+            <Button 
+              color="inherit" 
+              onClick={() => navigate('/login?role=volunteer')}
+              className={styles.navButton}
             >
-              התחברות כמנהל
-            </button>
-          </div>
-
-          <div className={styles.optionCard}>
-            <div className={styles.iconContainer}>
-              <LoginIcon className={styles.icon} />
-            </div>
-            <h4>מתנדב רשום?</h4>
-            <p>התחברו למערכת כדי לצפות במפת הקשישים באזור שלכם, לתאם ביקורים ולעדכן את המערכת.</p>
-            <button 
-              onClick={() => navigate('/login?role=volunteer')} 
-              className={styles.actionButton}
+             התחבר כמתנדב
+            </Button>
+            <Button 
+              color="inherit" 
+              onClick={() => navigate('/login?role=admin')}
+              className={styles.navButton}
             >
-              התחברות כמתנדב
-            </button>
-          </div>
+              התחבר כמנהל
+            </Button>
+            <Button 
+              color="inherit" 
+              onClick={() => navigate('/about')}
+              className={styles.navButton}
+            >
+              אודות
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      <div className={styles.undermaintytle}>
+        <div className={styles.mainContent}>
+          <h4 className={styles.sectionTitle}>מגפת הבדידות בקרב קשישים</h4>
+          <p className={styles.paragraph}>
+            בישראל מעל 1.1 מיליון מבוגרים בני 65 ומעלה; כ־30% מהם בודדים, עריריים וללא קרובי משפחה. מאות אלפי קשישים סובלים מבדידות קשה, ומאות מהם נפטרים בביתם מבלי שאיש ידע על כך בזמן אמת.
+          </p>
+          <p className={styles.paragraph}>
+            עמותת לב לקשיש הוקמה בשנת 2021 במטרה לתמוך בקשישים בודדים ולחבר בין מתנדבים חמים לקשישים עריריים, במטרה לתת להם תחושת משמעות ואכפתיות.
+          </p>
         </div>
 
         <div className={styles.features}>

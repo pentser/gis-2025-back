@@ -12,4 +12,4 @@ EXPOSE 5000
 
 # הגדרת הפקודה להפעלת השרת
 ENTRYPOINT ["node"]
-CMD ["server.js"] 
+CMD ["server.js"]

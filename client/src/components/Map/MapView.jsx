@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, Polyline } from 'react-leaflet';
+import { Container, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Alert } from '@mui/material';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, Polyline, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
@@ -9,7 +9,7 @@ import { fetchMapData, updateVisit, createVisit, fetchWithAuth, fetchVolunteerVi
 import styles from './MapView.module.css';
 import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import RouteIcon from '@mui/icons-material/Route';
 
@@ -66,7 +66,7 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
-// פונקציה לחישוב מרחק בין שתי נקודות בקילומטרים
+// פונקציה לחישוב מרחק בין שתי נקודות
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // רדיוס כדור הארץ בקילומטרים
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -76,7 +76,21 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
     Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+  return R * c; // מרחק בקילומטרים
+};
+
+// פונקציה לבדיקה אם נקודה נמצאת בתוך הרדיוס
+const isWithinRadius = (elderlyLocation, userLocation, radius) => {
+  if (!elderlyLocation || !elderlyLocation.coordinates || !userLocation || !radius) {
+    return true; // אם חסרים נתונים, נציג את הקשיש
+  }
+  const distance = calculateDistance(
+    userLocation[0],
+    userLocation[1],
+    elderlyLocation.coordinates[1],
+    elderlyLocation.coordinates[0]
+  );
+  return distance <= radius;
 };
 
 // פונקציה לחישוב ציון דחיפות
@@ -167,9 +181,14 @@ const MapView = () => {
   const [error, setError] = useState(null);
   const [center, setCenter] = useState([31.7767, 35.2345]);
   const [userLocation, setUserLocation] = useState(null);
-  const [searchRadius, setSearchRadius] = useState(5); // רדיוס חיפוש בקילומטרים
+  const [isUsingCurrentLocation, setIsUsingCurrentLocation] = useState(false);
+  const [searchRadius, setSearchRadius] = useState(10);
+  const [searchName, setSearchName] = useState('');
+  const [searchAddress, setSearchAddress] = useState('');
+  const [lastVisitFilter, setLastVisitFilter] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [visitDialog, setVisitDialog] = useState({
     open: false,
     elderId: null,
@@ -190,60 +209,111 @@ const MapView = () => {
     searchTerm: '',
     showRoute: false
   });
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [routingControl, setRoutingControl] = useState(null);
   const mapRef = useRef(null);
+  const [defaultAddress, setDefaultAddress] = useState(null);
 
-  useEffect(() => {
-    // קבלת מיקום המשתמש
+  // פונקציה לטעינת נתוני הקשישים
+  const loadMapData = async (lat, lng) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `/api/elderly?latitude=${lat}&longitude=${lng}&radius=${searchRadius}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Elderly data:', data);
+
+      setMapData(prev => ({
+        ...prev,
+        elderly: Array.isArray(data) ? data : []
+      }));
+    } catch (error) {
+      console.error('Error loading map data:', error);
+    }
+  };
+
+  // פונקציה לטעינת המיקום הדיפולטיבי של המתנדב
+  const loadDefaultLocation = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No auth token found');
+
+      const response = await fetch(
+        `/api/volunteers/${user.id}/location`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+      return data.location ? {
+        coordinates: [data.location.lat, data.location.lng],
+        address: data.address
+      } : null;
+    } catch (error) {
+      console.error('Error loading default location:', error);
+      return null;
+    }
+  };
+
+  // פונקציה לקבלת המיקום הנוכחי
+  const getCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          console.log('Current location:', latitude, longitude); // לבדיקת המיקום
           setUserLocation([latitude, longitude]);
           setCenter([latitude, longitude]);
           loadMapData(latitude, longitude);
         },
         (error) => {
           console.error('שגיאה בקבלת מיקום:', error);
-          loadMapData(center[0], center[1]);
+          // במקרה של שגיאה, נשתמש במיקום ברירת מחדל של ירושלים
+          const defaultLat = 31.7767;
+          const defaultLng = 35.2345;
+          setUserLocation([defaultLat, defaultLng]);
+          setCenter([defaultLat, defaultLng]);
+          loadMapData(defaultLat, defaultLng);
         }
       );
-    } else {
-      loadMapData(center[0], center[1]);
-    }
-
-    // טעינת ביקורים אם המשתמש הוא מתנדב
-    if (user?.role === 'volunteer') {
-      loadVisits();
-    }
-  }, [user]);
-
-  const loadMapData = async (lat, lng) => {
-    try {
-      const data = await fetchMapData(lat, lng);
-      setMapData(data);
-    } catch (err) {
-      setError(err.message);
     }
   };
 
   const loadVisits = async () => {
     try {
-      console.log('מתחיל טעינת ביקורים...');
+      console.log('טוען היסטוריית ביקורים...');
       const data = await fetchVolunteerVisits();
-      console.log('התקבלו ביקורים מהשרת:', data);
-      if (!Array.isArray(data)) {
-        console.error('הנתונים שהתקבלו אינם מערך:', data);
-        setVisits([]);
-        return;
-      }
-      setVisits(data);
+      console.log('ביקורים שהתקבלו:', data);
+      setVisits(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('שגיאה בטעינת ביקורים:', err);
       setError(err.message);
     }
   };
+
+  // טעינה ראשונית של המפה והביקורים
+  useEffect(() => {
+    if (user) {
+      getCurrentLocation();
+      loadVisits();
+    }
+  }, [user]);
 
   const handleNewVisit = (elderId, elderName) => {
     console.log('פתיחת דיאלוג ביקור חדש:', { elderId, elderName });
@@ -251,6 +321,9 @@ const MapView = () => {
       console.error('ID קשיש חסר');
       return;
     }
+    const now = new Date();
+    // מוסיף 3 שעות לשעון UTC כדי להתאים לשעון ישראל
+    now.setHours(now.getHours() + 3);
     setVisitDialog({
       open: true,
       elderId,
@@ -259,7 +332,7 @@ const MapView = () => {
         status: 'scheduled',
         notes: '',
         duration: 30,
-        date: new Date().toISOString().split('T')[0]
+        date: now.toISOString().slice(0, 16) // Format: "YYYY-MM-DDThh:mm"
       }
     });
   };
@@ -324,38 +397,9 @@ const MapView = () => {
     }));
   };
 
-  // פילטור קשישים לפי אזור המתנדב ומרחק
-  const getFilteredElderly = () => {
-    if (user?.role !== 'volunteer') {
-      return mapData.elderly;
-    }
-
-    if (!userLocation) {
-      return [];
-    }
-
-    return mapData.elderly.filter(elder => {
-      if (!elder.location?.coordinates) return false;
-      
-      const elderLat = elder.location.coordinates[1];
-      const elderLng = elder.location.coordinates[0];
-      
-      const distance = calculateDistance(
-        userLocation[0],
-        userLocation[1],
-        elderLat,
-        elderLng
-      );
-      
-      return distance <= searchRadius;
-    });
-  };
-
-  const filteredElderly = getFilteredElderly();
-
   // פונקציה לחישוב מסלול אופטימלי
   const calculateOptimalRoute = () => {
-    if (!userLocation || !filteredElderly.length) return;
+    if (!userLocation || !mapData.elderly.length) return;
 
     // ניקוי מסלול קודם אם קיים
     if (routingControl) {
@@ -363,7 +407,7 @@ const MapView = () => {
     }
 
     // מיון קשישים לפי ציון כולל
-    const sortedElderly = sortElderlyByScore(filteredElderly, userLocation);
+    const sortedElderly = sortElderlyByScore(mapData.elderly, userLocation);
     
     // בחירת שני הקשישים עם הציון הגבוה ביותר
     const topTwoElderly = sortedElderly.slice(0, 2);
@@ -441,11 +485,59 @@ const MapView = () => {
     }
   };
 
+  const formatAddress = (address) => {
+    if (typeof address === 'string') return address;
+    if (typeof address === 'object') {
+      const parts = [];
+      if (address.street) parts.push(address.street);
+      if (address.city) parts.push(address.city);
+      if (address.zipCode) parts.push(address.zipCode);
+      return parts.join(', ');
+    }
+    return 'כתובת לא זמינה';
+  };
+
+  // פונקציה לסינון קשישים לפי שם, כתובת ורדיוס
+  const filterElderly = (elder) => {
+    const withinRadius = !userLocation || isWithinRadius(elder.location, userLocation, searchRadius);
+    const matchesName = !searchName || 
+      `${elder.firstName} ${elder.lastName}`.toLowerCase().includes(searchName.toLowerCase());
+    const matchesAddress = !searchAddress || 
+      formatAddress(elder.address).toLowerCase().includes(searchAddress.toLowerCase());
+    
+    let matchesLastVisit = true;
+    if (lastVisitFilter) {
+      const daysSinceLastVisit = elder.lastVisit ? 
+        Math.floor((new Date() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)) : 
+        Number.POSITIVE_INFINITY;
+
+      switch (lastVisitFilter) {
+        case 'week':
+          matchesLastVisit = daysSinceLastVisit <= 7;
+          break;
+        case 'twoWeeks':
+          matchesLastVisit = daysSinceLastVisit > 7 && daysSinceLastVisit <= 14;
+          break;
+        case 'moreThanTwoWeeks':
+          matchesLastVisit = daysSinceLastVisit > 14;
+          break;
+      }
+    }
+
+    return withinRadius && matchesName && matchesAddress && matchesLastVisit;
+  };
+
   if (error) {
     return (
-      <Container className={styles.container}>
-        <Typography color="error">{error}</Typography>
-      </Container>
+      <Box 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
+        height="100%"
+        p={2}
+      >
+        <Alert severity="error">{error}</Alert>
+      </Box>
     );
   }
 
@@ -459,43 +551,78 @@ const MapView = () => {
           
           {user?.role === 'volunteer' && (
             <Box display="flex" gap={2} flexDirection="column" alignItems="flex-end">
-              <Typography 
-                variant="caption" 
-                color="error" 
-                sx={{ 
-                  backgroundColor: 'rgba(244, 67, 54, 0.1)', 
-                  padding: '4px 8px', 
-                  borderRadius: '4px',
-                  border: '1px solid #f44336'
-                }}
-              >
-                {filteredElderly.length < 2 
-                  ? 'נדרשים לפחות 2 קשישים באזור לחישוב מסלול'
-                  : 'החישוב מבוסס על 2 הקשישים עם הדחיפות הגבוהה ביותר באזור'
-                }
-              </Typography>
               <Box display="flex" gap={2}>
-                <FormControl sx={{ minWidth: 200 }}>
-                  <InputLabel>רדיוס חיפוש</InputLabel>
+                <FormControl sx={{ width: '160px' }}>
+                  <InputLabel>סינון לפי ביקור אחרון</InputLabel>
                   <Select
-                    value={searchRadius}
-                    onChange={(e) => setSearchRadius(e.target.value)}
-                    label="רדיוס חיפוש"
+                    value={lastVisitFilter}
+                    onChange={(e) => setLastVisitFilter(e.target.value)}
+                    label="סינון לפי ביקור אחרון"
                   >
-                    <MenuItem value={2}>2 ק"מ</MenuItem>
-                    <MenuItem value={5}>5 ק"מ</MenuItem>
-                    <MenuItem value={10}>10 ק"מ</MenuItem>
-                    <MenuItem value={20}>20 ק"מ</MenuItem>
+                    <MenuItem value="">הכל</MenuItem>
+                    <MenuItem value="week">שבוע אחרון</MenuItem>
+                    <MenuItem value="twoWeeks">שבועיים אחרונים</MenuItem>
+                    <MenuItem value="moreThanTwoWeeks">שבועיים ויותר</MenuItem>
                   </Select>
                 </FormControl>
+                <TextField
+                  sx={{ 
+                    width: '160px',
+                    '& .MuiInputBase-root': {
+                      height: '56px'
+                    }
+                  }}
+                  label="חיפוש לפי כתובת"
+                  value={searchAddress}
+                  onChange={(e) => setSearchAddress(e.target.value)}
+                  placeholder="הקלד כתובת..."
+                />
+                <TextField
+                  sx={{ 
+                    width: '160px',
+                    '& .MuiInputBase-root': {
+                      height: '56px'
+                    }
+                  }}
+                  label="חיפוש לפי שם"
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  placeholder="הקלד שם קשיש..."
+                />
+                <TextField
+                  sx={{ 
+                    width: '120px',
+                    '& .MuiInputBase-root': {
+                      height: '56px'
+                    }
+                  }}
+                  label="רדיוס חיפוש (ק״מ)"
+                  type="number"
+                  value={searchRadius}
+                  onChange={(e) => setSearchRadius(Number(e.target.value))}
+                  InputProps={{
+                    inputProps: { 
+                      min: 1,
+                      max: 50
+                    }
+                  }}
+                />
                 <Button
                   variant="contained"
                   color="primary"
                   startIcon={<RouteIcon />}
                   onClick={routingControl ? clearRoute : calculateOptimalRoute}
-                  disabled={filteredElderly.length < 2}
+                  disabled={mapData.elderly.length < 2}
+                  sx={{ 
+                    width: '200px',
+                    height: '56px',
+                    whiteSpace: 'pre-line',
+                    lineHeight: 1.2,
+                    textAlign: 'center',
+                    marginRight: '8px'
+                  }}
                 >
-                  {routingControl ? 'בטל מסלול' : 'חשב מסלול אופטימלי'}
+                  {routingControl ? 'בטל מסלול' : 'חשב מסלול אופטימלי\nלביקורים דחופים'}
                 </Button>
               </Box>
             </Box>
@@ -508,7 +635,9 @@ const MapView = () => {
             zoom={13}
             style={{ height: '100%', width: '100%' }}
             ref={mapRef}
+            zoomControl={false}
           >
+            <ZoomControl position="topleft" />
             <MapUpdater center={center} />
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -525,67 +654,85 @@ const MapView = () => {
             )}
             
             {/* הצגת מיקום המתנדב */}
-            {user?.role === 'volunteer' && userLocation && (
+            {userLocation && (
               <Marker
                 position={userLocation}
                 icon={volunteerIcon}
               >
                 <Popup>
                   <div>
-                    <h3>מיקום נוכחי</h3>
-                    <p>מתנדב: {user.firstName} {user.lastName}</p>
+                    <h3>המיקום שלי</h3>
+                    <p>{user.firstName} {user.lastName}</p>
                   </div>
                 </Popup>
               </Marker>
             )}
             
-            {/* הצגת קשישים */}
-            {filteredElderly.map((elder) => (
-              <Marker
-                key={elder._id}
-                position={[
-                  elder.location.coordinates[1],
-                  elder.location.coordinates[0]
-                ]}
-                icon={createElderlyIcon(elder)}
-              >
-                <Popup>
-                  <div>
-                    <h3>{elder.firstName} {elder.lastName}</h3>
-                    <p>כתובת: {elder.address}</p>
-                    <p>סטטוס: {elder.status}</p>
-                    <p>דחיפות: {calculateUrgencyScore(elder)}%</p>
-                    {user?.role === 'volunteer' && userLocation && (
-                      <p>
-                        מרחק: {calculateDistance(
+            {/* סמנים עבור זקנים */}
+            {mapData.elderly && mapData.elderly.length > 0 && mapData.elderly
+              .filter(filterElderly)
+              .map((elder) => (
+                <Marker
+                  key={elder._id}
+                  position={[elder.location.coordinates[1], elder.location.coordinates[0]]}
+                  icon={createElderlyIcon(elder)}
+                >
+                  <Popup>
+                    <div className="popup-content">
+                      <h3>{elder.firstName} {elder.lastName}</h3>
+                      <p>כתובת: {formatAddress(elder.address)}</p>
+                      <p>סטטוס: {elder.status === 'פעיל' ? 'פעיל' : 'לא פעיל'}</p>
+                      <p>ביקור אחרון: {elder.lastVisit ? new Date(elder.lastVisit).toLocaleDateString('he-IL') : 'אין ביקור'}</p>
+                      <p>זמן מאז ביקור אחרון: {
+                        !elder.lastVisit ? 'אין ביקור קודם' :
+                        Math.floor((new Date() - new Date(elder.lastVisit)) / (1000 * 60 * 60 * 24)) + ' ימים'
+                      }</p>
+                      <p>מרחק: {elder.distanceFromCurrentLocation ? 
+                        elder.distanceFromCurrentLocation.toFixed(1) : 
+                        calculateDistance(
                           userLocation[0],
                           userLocation[1],
                           elder.location.coordinates[1],
                           elder.location.coordinates[0]
-                        ).toFixed(1)} ק"מ
+                        ).toFixed(1)} ק"מ</p>
+                      <p style={{
+                        fontWeight: 'bold', 
+                        color: calculateUrgencyScore(elder) >= 80 ? '#e74c3c' :
+                              calculateUrgencyScore(elder) >= 60 ? '#f39c12' : '#2ecc71'
+                      }}>
+                        דחיפות: {
+                          calculateUrgencyScore(elder) >= 80 ? 'גבוהה' :
+                          calculateUrgencyScore(elder) >= 60 ? 'בינונית' : 'נמוכה'
+                        }
                       </p>
-                    )}
-                    <p>
-                      ביקור אחרון:{' '}
-                      {elder.lastVisit
-                        ? new Date(elder.lastVisit).toLocaleDateString('he-IL')
-                        : 'אין ביקורים'}
-                    </p>
-                    {user?.role === 'volunteer' && (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        onClick={() => handleNewVisit(elder._id, `${elder.firstName} ${elder.lastName}`)}
-                        sx={{ mt: 1 }}
-                      >
-                        תאם ביקור חדש
-                      </Button>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+                      <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          size="small"
+                          onClick={() => {
+                            console.log('ניווט לדף קשיש:', elder._id);
+                            navigate(`/app/elderly/${elder._id}`);
+                          }}
+                        >
+                          צפה בפרטים
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="secondary"
+                          size="small"
+                          onClick={() => {
+                            console.log('פתיחת דיאלוג ביקור חדש:', elder._id);
+                            handleNewVisit(elder._id, `${elder.firstName} ${elder.lastName}`);
+                          }}
+                        >
+                          קבע ביקור
+                        </Button>
+                      </Box>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
           </MapContainer>
         </div>
       </Paper>
@@ -594,7 +741,7 @@ const MapView = () => {
       {user?.role === 'volunteer' && (
         <Paper className={styles.visitsTable} sx={{ mt: 2, p: 2 }}>
           <Typography variant="h5" component="h2" gutterBottom>
-            ביקורים שלי
+            דיווחים/ביקורים שלי
           </Typography>
           <TableContainer>
             <Table>

@@ -1,9 +1,11 @@
 .container {
   padding: 2rem;
+  direction: rtl;
 }
 
 .paper {
   padding: 2rem;
+  overflow-x: auto; /* אפשר גלילה אופקית אם צריך */
 }
 
 .loading {
@@ -46,13 +48,53 @@
   background-color: #f5f5f5;
 }
 
-/* סטיילים לכפתורים */
-.action-button {
-  min-width: 120px;
+/* עיצוב לתא ההערות */
+.notesCell {
+  max-width: 200px;
+  min-width: 200px;
+  position: relative;
 }
 
-/* סטיילים לצ'יפים */
+.notesContent {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* סטיילינג לפופאפ בהובר */
+.notesContent:hover::after {
+  content: attr(data-notes);
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  z-index: 1000;
+  width: 250px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  line-height: 1.5;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+/* עיצוב לכפתור */
+.actionButton {
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+/* עיצוב לצ'יפים */
 .urgency-chip {
   font-weight: bold;
   min-width: 80px;
+}
+
+/* עיצוב לשורות הטבלה */
+.table-row:hover {
+  background-color: rgba(0, 0, 0, 0.04);
 } 

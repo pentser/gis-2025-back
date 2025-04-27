@@ -1,24 +1,19 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { CircularProgress, Box } from '@mui/material';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
 
 const PrivateRoute = ({ children }) => {
-  const { user, loading, checkAuth } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
-
-  useEffect(() => {
-    if (!user && !loading) {
-      checkAuth();
-    }
-  }, [user, loading, checkAuth]);
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
+      <Box 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
         minHeight="100vh"
       >
         <CircularProgress />
@@ -27,6 +22,7 @@ const PrivateRoute = ({ children }) => {
   }
 
   if (!user) {
+    // שמירת המיקום הנוכחי כדי לחזור אליו אחרי ההתחברות
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

@@ -44,24 +44,23 @@ export const createVisit = async (visitData) => {
   try {
     console.log('שולח בקשה ליצירת ביקור:', visitData);
     
+    // בדיקות תקינות
     if (!visitData.elder) {
-      console.error('חסר ID קשיש בנתונים:', visitData);
       throw new Error('נדרש לציין קשיש');
     }
 
-    if (!visitData.volunteer) {
-      console.error('חסר ID מתנדב בנתונים:', visitData);
-      throw new Error('נדרש לציין מתנדב');
-    }
-
     if (!visitData.date) {
-      console.error('חסר תאריך בנתונים:', visitData);
       throw new Error('נדרש לציין תאריך');
     }
 
     if (!visitData.duration) {
-      console.error('חסר משך בנתונים:', visitData);
       throw new Error('נדרש לציין משך ביקור');
+    }
+
+    // אם המשתמש הוא מתנדב, נוודא שיש volunteer ID
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && user.role === 'volunteer' && !visitData.volunteer) {
+      visitData.volunteer = user._id;
     }
 
     const response = await fetch(`${API_URL}/api/visits`, {

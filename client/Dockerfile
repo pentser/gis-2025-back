@@ -19,5 +19,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 # הגדרת הפקודה להפעלת Nginx
-ENTRYPOINT ["nginx"]
-CMD ["-g", "daemon off;"] 
+CMD ["nginx", "-g", "daemon off;"]
