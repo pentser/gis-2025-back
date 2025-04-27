@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { fetchElderly, deleteElderly } from '../../services/api';
+import { fetchElderly, softDeleteElderly } from '../../services/api';
 import ErrorBoundary from '../ErrorBoundary/ErrorBoundary';
 
 const ElderlyList = () => {
@@ -43,7 +43,7 @@ const ElderlyList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('האם אתה בטוח שברצונך למחוק קשיש זה?')) {
       try {
-        await deleteElderly(id);
+        await softDeleteElderly(id);
         await loadElderly();
       } catch (err) {
         setError('אירעה שגיאה במחיקת הקשיש');

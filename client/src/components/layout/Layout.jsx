@@ -160,6 +160,39 @@ export default function Layout() {
               </Tabs>
             </Box>
           )}
+          {user && user.role === 'admin' && (
+            [
+              '/app/elderly',
+              '/app/adminvolunteers',
+              '/app/visits'
+            ].some(path => location.pathname.startsWith(path)) && (
+              <Box sx={{ 
+                flexGrow: 1, 
+                display: 'flex', 
+                justifyContent: 'center'
+              }}>
+                <Tabs 
+                  value={false}
+                  onChange={() => navigate('/app/dashboard')}
+                  textColor="inherit"
+                  indicatorColor="secondary"
+                  sx={{ 
+                    '& .MuiTab-root': { 
+                      minWidth: 'auto',
+                      padding: '6px 16px',
+                      fontSize: '0.95rem'
+                    }
+                  }}
+                >
+                  <Tab 
+                    icon={<DashboardIcon sx={{ fontSize: '1.2rem' }} />} 
+                    iconPosition="start" 
+                    label="דשבורד" 
+                  />
+                </Tabs>
+              </Box>
+            )
+          )}
 
           {/* Left Section - Location Button */}
           {user && (
