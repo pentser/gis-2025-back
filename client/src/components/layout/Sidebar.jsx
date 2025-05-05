@@ -11,6 +11,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import HomeIcon from '@mui/icons-material/Home';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
+import InfoIcon from '@mui/icons-material/Info';
 import { useAuth } from '../../context/AuthContext';
 import styles from './Layout.module.css';
 import { Divider } from '@mui/material';
@@ -40,6 +41,11 @@ const Sidebar = ({ open, onClose }) => {
       { text: 'מפת קשישים', icon: <MapIcon />, path: '/app/map' }
     );
   }
+
+  // הוספת קישור לדף אודות בסוף התפריט
+  menuItems.push(
+    { text: 'אודות', icon: <InfoIcon />, path: '/about' }
+  );
 
   return (
     <Drawer

@@ -91,7 +91,7 @@ volunteerSchema.pre('save', async function(next) {
     // בדיקה אם הסיסמה כבר מוצפנת (אורך מינימלי של 60 תווים והתחלה עם $2a$, $2b$ או $2y$ שמאפיינים את bcrypt)
     const isBcryptHash = /^\$2[ayb]\$\d+\$/.test(this.password) && this.password.length >= 60;
     if (isBcryptHash) {
-      console.log('הסיסמה כבר מוצפנת, דילוג על הצפנה נוספת');
+      console.log('Password is already encrypted, skipping encryption');
       return next();
     }
     

@@ -323,6 +323,20 @@ const ElderlyPopup = ({ elder }) => {
   );
 };
 
+// פונקציה להמרת קואורדינטות לכתובת
+const reverseGeocode = async (lat, lon) => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=he`
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('שגיאה בהמרת קואורדינטות לכתובת:', error);
+    return null;
+  }
+};
+
 const MapView = () => {
   const [mapData, setMapData] = useState({ elderly: [] });
   const [error, setError] = useState(null);
@@ -419,27 +433,64 @@ const MapView = () => {
     setIsLoading(true);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newLocation = [position.coords.latitude, position.coords.longitude];
-          setUserLocation(newLocation);
-          setCenter(newLocation);
-          setAddressInput(''); // ניקוי שדה הכתובת
-          
-          // עדכון המפה למיקום החדש
-          if (mapRef.current) {
-            mapRef.current.flyTo(newLocation, 13);
+        async (position) => {
+          try {
+            const newLocation = [position.coords.latitude, position.coords.longitude];
+            
+            // המרת הקואורדינטות לכתובת
+            const geoData = await reverseGeocode(position.coords.latitude, position.coords.longitude);
+            if (geoData) {
+              console.log('Location data received:', geoData);
+              setAddressInput(geoData.display_name || '');
+            }
+
+            setUserLocation(newLocation);
+            setCenter(newLocation);
+            
+            // עדכון המפה למיקום החדש
+            if (mapRef.current) {
+              mapRef.current.flyTo(newLocation, 13);
+            }
+            
+            // רענון הנתונים
+            await fetchMapData();
+          } catch (error) {
+            console.error('שגיאה בעדכון המיקום:', error);
+            alert('שגיאה בעדכון המיקום. אנא נסה שוב.');
+          } finally {
+            setIsLoading(false);
           }
-          
-          // רענון הנתונים
-          fetchMapData();
-          setIsLoading(false);
         },
         (error) => {
-          console.error('Error getting location:', error);
+          console.error('שגיאה בקבלת מיקום:', error);
+          let errorMessage = 'שגיאה בקבלת המיקום הנוכחי. ';
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += 'נדרש אישור גישה למיקום.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += 'מידע המיקום אינו זמין.';
+              break;
+            case error.TIMEOUT:
+              errorMessage += 'פג הזמן לקבלת המיקום.';
+              break;
+            default:
+              errorMessage += 'אנא נסה שוב.';
+          }
+          
+          alert(errorMessage);
           setIsLoading(false);
         },
-        { enableHighAccuracy: true }
+        { 
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
       );
+    } else {
+      alert('הדפדפן שלך לא תומך בשירותי מיקום');
+      setIsLoading(false);
     }
   };
 
@@ -488,9 +539,9 @@ const MapView = () => {
 
   const loadVisits = async () => {
     try {
-      console.log('טוען היסטוריית ביקורים...');
+      console.log('Loading visit history...');
       const data = await fetchVolunteerVisits();
-      console.log('ביקורים שהתקבלו:', data);
+      console.log('Visits received:', data);
       setVisits(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('שגיאה בטעינת ביקורים:', err);
@@ -507,9 +558,9 @@ const MapView = () => {
   }, [user]);
 
   const handleNewVisit = (elderId, elderName) => {
-    console.log('פתיחת דיאלוג ביקור חדש:', { elderId, elderName });
+    console.log('Opening new visit dialog:', { elderId, elderName });
     if (!elderId) {
-      console.error('ID קשיש חסר');
+      console.error('ID elder missing');
       return;
     }
     const now = new Date();
@@ -530,16 +581,16 @@ const MapView = () => {
 
   const handleVisitSubmit = async () => {
     try {
-      console.log('נתוני המשתמש:', user);
-      console.log('נתוני הדיאלוג:', visitDialog);
+      console.log('User data:', user);
+      console.log('Dialog data:', visitDialog);
       
       if (!visitDialog.elderId) {
-        console.error('ID קשיש חסר בדיאלוג');
+        console.error('ID elder missing in dialog');
         throw new Error('נדרש לציין קשיש');
       }
 
       if (!user?.id) {
-        console.error('ID משתמש חסר:', user);
+        console.error('User ID missing:', user);
         throw new Error('נדרש לציין מתנדב');
       }
 
@@ -552,10 +603,10 @@ const MapView = () => {
         notes: visitDialog.visitData.notes
       };
       
-      console.log('שולח נתוני ביקור:', visitData);
+      console.log('Sending visit data:', visitData);
       
       const response = await createVisit(visitData);
-      console.log('תגובת השרת ליצירת ביקור:', response);
+      console.log('Server response for creating visit:', response);
       
       // סגירת הדיאלוג
       setVisitDialog(prev => ({ ...prev, open: false }));
@@ -565,7 +616,7 @@ const MapView = () => {
       
       // המתנה קצרה לפני טעינת הביקורים מחדש
       setTimeout(async () => {
-        console.log('טוען ביקורים מחדש אחרי יצירת ביקור חדש...');
+        console.log('Reloading visits after creating new visit...');
         await loadVisits();
       }, 1000);
       
@@ -704,10 +755,10 @@ const MapView = () => {
                 onChange={(e) => setRadius(Number(e.target.value))}
                 label="רדיוס"
               >
-                <MenuItem value={5}>5 ק"מ</MenuItem>
-                <MenuItem value={10}>10 ק"מ</MenuItem>
-                <MenuItem value={20}>20 ק"מ</MenuItem>
-                <MenuItem value={50}>50 ק"מ</MenuItem>
+                <MenuItem value={5}>5 km</MenuItem>
+                <MenuItem value={10}>10 km</MenuItem>
+                <MenuItem value={20}>20 km</MenuItem>
+                <MenuItem value={50}>50 km</MenuItem>
               </Select>
             </FormControl>
             <FormControl size="small" sx={{ width: '150px' }}>

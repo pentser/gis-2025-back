@@ -28,6 +28,7 @@ import VolunteerVisits from './components/volunteer/VolunteerVisits';
 import PrivateRoute from './components/Auth/PrivateRoute';
 import ElderlyPage from './pages/ElderlyPage';
 import AdminVolunteers from './components/Admin/AdminVolunteers';
+import About from './components/About/About';
 
 // יצירת ערכת נושא מותאמת
 const theme = createTheme({
@@ -90,6 +91,7 @@ const App = () => {
               <Route path="/register" element={<Register />} />
               <Route path="/" element={<LandingPage />} />
               <Route path="/contact" element={<ContactForm />} />
+              <Route path="/about" element={<About />} />
 
               {/* נתיבים מוגנים */}
               <Route path="/app" element={<PrivateRoute><Layout /></PrivateRoute>}>

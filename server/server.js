@@ -54,10 +54,10 @@ app.use('/api/admin', adminRoutes);
 // חיבור למסד הנתונים
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
-    console.log('מחובר למסד הנתונים MongoDB');
+    console.log('Connected to MongoDB database');
     const port = process.env.PORT || 5000;
     app.listen(port, () => {
-      console.log(`השרת פועל בפורט ${port}`);
+      console.log(`Server is running on port ${port}`);
     });
   })
   .catch((error) => {

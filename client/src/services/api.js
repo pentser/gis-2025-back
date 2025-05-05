@@ -54,7 +54,7 @@ export const fetchVisitById = (id) => fetchWithAuth(`/api/visits/${id}`);
 
 export const createVisit = async (visitData) => {
   try {
-    console.log('שולח בקשה ליצירת ביקור:', visitData);
+    console.log('Sending request to create visit:', visitData);
     
     // בדיקות תקינות
     if (!visitData.elder) {
@@ -91,7 +91,7 @@ export const createVisit = async (visitData) => {
       throw new Error(data.message || 'שגיאה ביצירת ביקור');
     }
 
-    console.log('ביקור נוצר בהצלחה:', data);
+    console.log('Visit created successfully:', data);
     return data;
   } catch (error) {
     console.error('שגיאה ביצירת ביקור:', error);
@@ -165,7 +165,7 @@ export const fetchVolunteers = () => fetchWithAuth('/api/volunteers');
 
 export const fetchVolunteerVisits = async () => {
   try {
-    console.log('שולח בקשה לקבלת ביקורים מהשרת');
+    console.log('Sending request to get visits from server');
     const response = await fetch(`${API_URL}/api/visits/my`, {
       headers: {
         ...getHeaders()
@@ -178,7 +178,7 @@ export const fetchVolunteerVisits = async () => {
     }
 
     const responseText = await response.text();
-    console.log('תשובה גולמית מהשרת:', responseText);
+    console.log('Raw response from server:', responseText);
 
     if (!responseText || responseText.trim() === '') {
       console.error('התקבלה תשובה ריקה מהשרת');
@@ -194,7 +194,7 @@ export const fetchVolunteerVisits = async () => {
       return [];
     }
 
-    console.log('תשובה מהשרת אחרי פענוח:', data);
+    console.log('Server response after parsing:', data);
 
     // בדיקה אם התקבל אובייקט ריק
     if (typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0) {
@@ -211,17 +211,17 @@ export const fetchVolunteerVisits = async () => {
     // בדיקת תקינות כל ביקור
     const validVisits = data.filter(visit => {
       if (!visit || typeof visit !== 'object') {
-        console.log('נמצא ביקור לא תקין:', visit);
+        console.log('Found invalid visit:', visit);
         return false;
       }
       const isValid = visit.elder && visit.date && visit.duration;
       if (!isValid) {
-        console.log('ביקור חסר שדות חובה:', visit);
+        console.log('Visit missing required fields:', visit);
       }
       return isValid;
     });
 
-    console.log('מספר ביקורים תקינים:', validVisits.length);
+    console.log('Number of valid visits:', validVisits.length);
     return validVisits;
   } catch (error) {
     console.error('שגיאה בקבלת ביקורים:', error);

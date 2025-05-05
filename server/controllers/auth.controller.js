@@ -24,7 +24,7 @@ const geocodeAddress = async (address) => {
       
       // וידוא שהערכים חוקיים
       if (isNaN(lon) || isNaN(lat)) {
-        console.error('ערכי קואורדינטות לא תקינים:', data[0]);
+        console.error('Received coordinates:', data[0]);
         return null;
       }
       
@@ -76,21 +76,21 @@ export const register = async (req, res) => {
     if (address) {
       try {
         const coordinates = await geocodeAddress(address);
-        console.log('קואורדינטות שהתקבלו:', coordinates);
+        console.log('Received coordinates:', coordinates);
         
         if (coordinates && Array.isArray(coordinates) && coordinates.length === 2) {
           location = {
             type: 'Point',
             coordinates: coordinates
           };
-          console.log('מיקום שנוצר:', location);
+          console.log('Location created:', location);
         } else {
           // מיקום ברירת מחדל של ישראל אם לא התקבלו קואורדינטות תקינות
           location = {
             type: 'Point',
             coordinates: [35.217018, 31.771959]
           };
-          console.log('מיקום ברירת מחדל נוצר:', location);
+          console.log('Default location created:', location);
         }
       } catch (geoError) {
         console.error('שגיאה בהמרת כתובת למיקום:', geoError);
@@ -125,7 +125,7 @@ export const register = async (req, res) => {
 
     // אם המשתמש הוא מתנדב, נשתמש בפונקציית הקישור
     if (role === 'volunteer') {
-      console.log('יוצר משתמש מתנדב מקושר');
+      console.log('Creating linked volunteer user');
       
       // נתוני המתנדב
       const volunteerData = {
@@ -145,7 +145,7 @@ export const register = async (req, res) => {
         // יצירת משתמש ומתנדב מקושרים
         const result = await createLinkedVolunteer(userData, volunteerData);
         user = result.user;
-        console.log('נוצר משתמש מתנדב:', user._id, 'מקושר למתנדב:', result.volunteer._id);
+        console.log('Created volunteer user:', user._id, 'linked to volunteer:', result.volunteer._id);
       } catch (linkError) {
         console.error('שגיאה ביצירת מתנדב מקושר:', linkError);
         return res.status(500).json({ 
@@ -156,7 +156,7 @@ export const register = async (req, res) => {
     } else {
       // יצירת משתמש רגיל (לא מתנדב)
       try {
-        console.log('נתוני משתמש לשמירה:', { ...userData, password: '********' }); // הסתרת הסיסמה בלוג
+        console.log('User data to save:', { ...userData, password: '********' }); // hiding password in log
         user = await User.create(userData);
       } catch (userError) {
         console.error('שגיאה ביצירת משתמש:', userError);
@@ -202,30 +202,30 @@ export const register = async (req, res) => {
 // התחברות משתמש
 export const login = async (req, res) => {
   try {
-    console.log('קיבלתי בקשת התחברות:', req.body);
+    console.log('Received login request:', req.body);
     const { email, password, role } = req.body;
 
     if (!email || !password) {
-      console.log('חסרים פרטי התחברות');
+      console.log('Missing login details');
       return res.status(400).json({ message: 'נדרש אימייל וסיסמה' });
     }
 
     // בדיקת קיום המשתמש
     let user = await User.findOne({ email });
     if (!user) {
-      console.log('משתמש לא נמצא:', email);
+      console.log('User not found:', email);
       return res.status(404).json({ message: 'משתמש לא נמצא' });
     }
 
     // בדיקת סטטוס פעיל
     if (!user.isActive) {
-      console.log('משתמש לא פעיל:', email);
+      console.log('User not active:', email);
       return res.status(403).json({ message: 'המשתמש אינו פעיל' });
     }
 
     // בדיקת התאמת תפקיד
     if (role && role !== user.role) {
-      console.log('ניסיון התחברות עם תפקיד לא מתאים:', { requestedRole: role, actualRole: user.role });
+      console.log('Login attempt with incorrect role:', { requestedRole: role, actualRole: user.role });
       return res.status(403).json({ 
         message: user.role === 'admin' ? 
           'אין לך הרשאות להתחבר כמנהל' : 
@@ -236,7 +236,7 @@ export const login = async (req, res) => {
     // בדיקת סיסמה
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      console.log('סיסמה שגויה עבור משתמש:', email);
+      console.log('Wrong password for user:', email);
       return res.status(401).json({ message: 'סיסמה שגויה' });
     }
 
@@ -246,14 +246,14 @@ export const login = async (req, res) => {
       try {
         const volunteer = await findVolunteerByUserId(user._id);
         if (volunteer) {
-          console.log('נמצא מתנדב מקושר:', volunteer._id);
+          console.log('Found linked volunteer:', volunteer._id);
           volunteerData = volunteer;
           
           // עדכון תאריך התחברות אחרונה של המתנדב
           volunteer.lastLogin = new Date();
           await volunteer.save();
         } else {
-          console.log('לא נמצא מתנדב מקושר למשתמש:', user._id);
+          console.log('No linked volunteer found for user:', user._id);
         }
       } catch (volunteerErr) {
         console.error('שגיאה בקבלת מידע המתנדב:', volunteerErr);
@@ -262,7 +262,7 @@ export const login = async (req, res) => {
 
     // תיקון מבנה מיקום לא תקין (אם יש) - בנפרד מתהליך האימות
     if (user.location && user.location.coordinates) {
-      console.log('בודק תקינות מיקום עבור:', email);
+      console.log('Checking location validity for:', email);
       
       try {
         let needsLocationFix = false;
@@ -273,7 +273,7 @@ export const login = async (req, res) => {
             (Array.isArray(coordinates) && coordinates.length > 0 && typeof coordinates[0] === 'string')) {
           
           needsLocationFix = true;
-          console.log('נמצא פורמט קואורדינטות לא תקין:', coordinates);
+          console.log('Found invalid coordinates format:', coordinates);
           
           // נסיון לפרסר מחרוזת כ-JSON
           try {
@@ -283,7 +283,7 @@ export const login = async (req, res) => {
             try {
               parsedValue = JSON.parse(stringValue);
             } catch (parseErr) {
-              console.log('לא ניתן לפרסר את הקואורדינטות כ-JSON');
+              console.log('Cannot parse coordinates as JSON');
             }
             
             // בדיקת מבנים אפשריים של הקואורדינטות
@@ -292,27 +292,27 @@ export const login = async (req, res) => {
                 // אם המבנה הוא מערך של אובייקטים עם lat ו-lng
                 if (parsedValue[0].lat && parsedValue[0].lng) {
                   user.location.coordinates = [parsedValue[0].lng, parsedValue[0].lat];
-                  console.log('קואורדינטות תוקנו (מבנה מערך):', user.location.coordinates);
+                  console.log('Coordinates fixed (array structure):', user.location.coordinates);
                 } 
                 // אם המבנה הוא מערך של מספרים
                 else if (typeof parsedValue[0] === 'number' && typeof parsedValue[1] === 'number') {
                   user.location.coordinates = [parsedValue[0], parsedValue[1]];
-                  console.log('קואורדינטות תוקנו (מערך מספרים):', user.location.coordinates);
+                  console.log('Coordinates fixed (number array):', user.location.coordinates);
                 }
               } 
               // אם המבנה הוא אובייקט בודד עם lat ו-lng
               else if (parsedValue.lat && parsedValue.lng) {
                 user.location.coordinates = [parsedValue.lng, parsedValue.lat];
-                console.log('קואורדינטות תוקנו (אובייקט בודד):', user.location.coordinates);
+                console.log('Coordinates fixed (single object):', user.location.coordinates);
               }
               else {
                 // אם המבנה לא ידוע
-                console.log('מבנה קואורדינטות לא ידוע, מסיר את המיקום');
+                console.log('Unknown coordinates structure, removing location');
                 user.location = undefined;
               }
             } else {
               // אם לא הצלחנו לפרסר, מסירים את המיקום
-              console.log('לא ניתן לפרסר את הקואורדינטות, מסיר את המיקום');
+              console.log('Cannot parse coordinates, removing location');
               user.location = undefined;
             }
           } catch (fixErr) {
@@ -330,7 +330,7 @@ export const login = async (req, res) => {
           const isValidLatitude = !isNaN(lat) && lat >= -90 && lat <= 90;
           
           if (!isValidLongitude || !isValidLatitude) {
-            console.log('קואורדינטות לא תקינות (מספרים לא תקינים):', coordinates);
+            console.log('Invalid coordinates (invalid numbers):', coordinates);
             user.location = undefined;
             needsLocationFix = true;
           }
@@ -346,10 +346,10 @@ export const login = async (req, res) => {
             );
             
             if (updatedUser) {
-              console.log('מיקום משתמש עודכן בהצלחה');
+              console.log('User location updated successfully');
               user = updatedUser;
             } else {
-              console.log('לא ניתן היה לעדכן את מיקום המשתמש');
+              console.log('Could not update user location');
             }
           } catch (updateErr) {
             console.error('שגיאה בעדכון מיקום המשתמש, ממשיך ללא עדכון:', updateErr);
@@ -380,13 +380,13 @@ export const login = async (req, res) => {
         { new: true, runValidators: false }
       );
       
-      console.log('טוקן נשמר בהצלחה למשתמש');
+      console.log('Token saved successfully for user');
     } catch (tokenErr) {
       console.error('שגיאה בשמירת הטוקן למשתמש:', tokenErr);
       // נמשיך בתהליך ההתחברות גם אם נכשלה שמירת הטוקן
     }
 
-    console.log('התחברות מוצלחת:', email);
+    console.log('Successful login:', email);
 
     const userResponse = {
       id: user._id,
@@ -404,7 +404,7 @@ export const login = async (req, res) => {
         status: volunteerData.status || 'available',
         lastLogin: volunteerData.lastLogin
       };
-      console.log('שולח נתוני מתנדב בתגובה:', userResponse.volunteer);
+      console.log('Sending volunteer data in response:', userResponse.volunteer);
     }
 
     console.log('מבנה התגובה המלא:', {
@@ -452,10 +452,10 @@ export const getMe = async (req, res) => {
       try {
         const volunteer = await findVolunteerByUserId(user._id);
         if (volunteer) {
-          console.log('נמצא מתנדב מקושר:', volunteer._id);
+          console.log('Found linked volunteer:', volunteer._id);
           volunteerData = volunteer;
         } else {
-          console.log('לא נמצא מתנדב מקושר למשתמש:', user._id);
+          console.log('No linked volunteer found for user:', user._id);
         }
       } catch (volunteerErr) {
         console.error('שגיאה בקבלת מידע המתנדב:', volunteerErr);
@@ -479,7 +479,7 @@ export const getMe = async (req, res) => {
         status: volunteerData.status || 'available',
         lastLogin: volunteerData.lastLogin
       };
-      console.log('שולח נתוני מתנדב בתגובה:', userResponse.volunteer);
+      console.log('Sending volunteer data in response:', userResponse.volunteer);
     }
 
     res.json(userResponse);
@@ -594,7 +594,7 @@ export const updateProfile = async (req, res) => {
         
         // עדכון המתנדב המקושר
         const updatedVolunteer = await updateVolunteerByUserId(user._id, volunteerUpdateData);
-        console.log('עודכן מתנדב מקושר:', updatedVolunteer ? updatedVolunteer._id : 'לא נמצא');
+        console.log('Updated linked volunteer:', updatedVolunteer ? updatedVolunteer._id : 'not found');
       } catch (volunteerUpdateError) {
         console.error('שגיאה בעדכון המתנדב המקושר:', volunteerUpdateError);
         // נמשיך גם אם יש שגיאה בעדכון המתנדב

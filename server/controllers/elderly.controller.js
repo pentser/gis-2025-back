@@ -202,7 +202,7 @@ export const deleteElderly = async (req, res) => {
       try {
         const User = mongoose.model('User');
         await User.deleteOne({ _id: userId });
-        console.log(`משתמש מקושר ${userId} נמחק`);
+        console.log(`Linked user ${userId} deleted`);
       } catch (userDeleteError) {
         console.error('שגיאה במחיקת המשתמש המקושר:', userDeleteError);
         // נמשיך גם אם יש שגיאה במחיקת המשתמש

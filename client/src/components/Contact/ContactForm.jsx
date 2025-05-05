@@ -35,7 +35,7 @@ const ContactForm = () => {
     e.preventDefault();
     try {
       // כאן תהיה הלוגיקה לשליחת הטופס לשרת
-      console.log('טופס נשלח:', formData);
+      console.log('Form submitted:', formData);
       setSuccess(true);
       setFormData({
         firstName: '',

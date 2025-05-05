@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 // יצירת ביקור חדש
 export const createVisit = async (req, res) => {
   try {
-    console.log('מקבל בקשה ליצירת ביקור:', req.body);
+    console.log('Received request to create visit:', req.body);
     const { elder, date, duration, status, notes } = req.body;
     
     if (!elder) {
@@ -20,10 +20,10 @@ export const createVisit = async (req, res) => {
       notes
     });
     
-    console.log('שומר ביקור חדש:', visit);
+    console.log('Saving new visit:', visit);
     await visit.save();
     await visit.populate('elder volunteer');
-    console.log('ביקור נשמר בהצלחה:', visit);
+    console.log('Visit saved successfully:', visit);
     
     res.status(201).json(visit);
   } catch (error) {
@@ -38,8 +38,8 @@ export const createVisit = async (req, res) => {
 // קבלת כל הביקורים של מתנדב
 export const getMyVisits = async (req, res) => {
   try {
-    console.log('התקבלה בקשה לקבלת ביקורים');
-    console.log('מידע על המשתמש:', req.user);
+    console.log('Received request to get visits');
+    console.log('User info:', req.user);
     console.log('headers:', req.headers);
 
     if (!req.user || !req.user._id) {
@@ -47,7 +47,7 @@ export const getMyVisits = async (req, res) => {
       return res.status(401).json({ message: 'משתמש לא מחובר' });
     }
 
-    console.log('מקבל בקשה לביקורים של מתנדב:', req.user._id);
+    console.log('Getting visits for volunteer:', req.user._id);
     console.log('Query params:', req.query);
     
     const { startDate, endDate } = req.query;
@@ -57,20 +57,20 @@ export const getMyVisits = async (req, res) => {
       query.date = {};
       if (startDate) {
         query.date.$gte = new Date(startDate);
-        console.log('תאריך התחלה:', query.date.$gte);
+        console.log('Start date:', query.date.$gte);
       }
       if (endDate) {
         query.date.$lte = new Date(endDate);
-        console.log('תאריך סיום:', query.date.$lte);
+        console.log('End date:', query.date.$lte);
       }
     }
 
-    console.log('מחפש ביקורים עם query:', JSON.stringify(query));
+    console.log('Searching visits with query:', JSON.stringify(query));
     
     // בדיקה שהמשתמש קיים במערכת
     const Visit = mongoose.model('Visit');
     const visitsCount = await Visit.countDocuments(query);
-    console.log('מספר ביקורים שנמצאו במערכת:', visitsCount);
+    console.log('Number of visits found in system:', visitsCount);
     
     let visits = await Visit.find(query)
       .populate({
@@ -84,8 +84,8 @@ export const getMyVisits = async (req, res) => {
       .sort({ date: -1 })
       .lean();
 
-    console.log('סוג הנתונים שנמצאו:', typeof visits, Array.isArray(visits));
-    console.log('נמצאו ביקורים:', visits?.length);
+    console.log('Type of data found:', typeof visits, Array.isArray(visits));
+    console.log('Visits found:', visits?.length);
     
     // וידוא שהתוצאה היא מערך
     if (!Array.isArray(visits)) {
@@ -96,13 +96,13 @@ export const getMyVisits = async (req, res) => {
     // בדיקת תקינות כל ביקור
     const validVisits = visits.filter(visit => {
       if (!visit) {
-        console.log('נמצא ביקור null או undefined');
+        console.log('Found null or undefined visit');
         return false;
       }
 
       const isValid = visit.elder && visit.date && visit.duration;
       if (!isValid) {
-        console.log('נמצא ביקור לא תקין:', JSON.stringify(visit));
+        console.log('Found invalid visit:', JSON.stringify(visit));
       } else {
         console.log('נמצא ביקור תקין:', JSON.stringify({
           id: visit._id,
@@ -114,11 +114,11 @@ export const getMyVisits = async (req, res) => {
       return isValid;
     });
 
-    console.log('מספר ביקורים תקינים:', validVisits.length);
+    console.log('Number of valid visits:', validVisits.length);
     if (validVisits.length > 0) {
-      console.log('דוגמה לביקור תקין:', JSON.stringify(validVisits[0]));
+      console.log('Example of valid visit:', JSON.stringify(validVisits[0]));
     } else {
-      console.log('לא נמצאו ביקורים תקינים');
+      console.log('No valid visits found');
     }
 
     return res.json(validVisits);
