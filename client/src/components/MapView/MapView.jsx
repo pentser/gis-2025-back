@@ -18,18 +18,48 @@ const createElderlyIcon = (urgency) => {
   
   return L.divIcon({
     className: 'custom-div-icon',
-    html: `<div style="background-color: ${color}; width: 10px; height: 10px; border-radius: 50%; border: 2px solid white;"></div>`,
-    iconSize: [15, 15],
-    iconAnchor: [7, 7]
+    html: `<div style="
+      background-color: ${color}; 
+      width: 35px; 
+      height: 35px; 
+      border-radius: 50%; 
+      border: 4px solid white; 
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: white;
+      font-weight: bold;
+    ">
+      ${urgency === 'high' ? '!' : ''}
+    </div>`,
+    iconSize: [43, 43],
+    iconAnchor: [21, 21]
   });
 };
 
 const createVolunteerIcon = () => {
   return L.divIcon({
     className: 'custom-div-icon',
-    html: '<div style="background-color: #4285F4; width: 10px; height: 10px; border-radius: 50%; border: 2px solid white;"></div>',
-    iconSize: [15, 15],
-    iconAnchor: [7, 7]
+    html: `<div style="
+      background-color: #4285F4; 
+      width: 35px; 
+      height: 35px; 
+      border-radius: 50%; 
+      border: 4px solid white; 
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: white;
+      font-weight: bold;
+    ">
+      V
+    </div>`,
+    iconSize: [43, 43],
+    iconAnchor: [21, 21]
   });
 };
 

@@ -169,6 +169,19 @@ const calculateUrgency = async (elder) => {
   }
 };
 
+// פונקציית עזר לפורמט כתובת
+const formatAddress = (address) => {
+  if (!address) return 'כתובת לא ידועה';
+  if (typeof address === 'string') return address;
+  
+  const parts = [];
+  if (address.street) parts.push(address.street);
+  if (address.city) parts.push(address.city);
+  if (address.zipCode) parts.push(address.zipCode);
+  
+  return parts.length > 0 ? parts.join(', ') : 'כתובת לא ידועה';
+};
+
 router.get('/dashboard', auth, isAdmin, async (req, res) => {
   try {
     console.log('Fetching dashboard data...');
@@ -223,7 +236,7 @@ router.get('/dashboard', auth, isAdmin, async (req, res) => {
       id: elder._id.toString(),
       firstName: elder.firstName,
       lastName: elder.lastName,
-      address: elder.address,
+      address: formatAddress(elder.address),
       location: elder.location?.coordinates 
         ? [elder.location.coordinates[1], elder.location.coordinates[0]]
         : null,
@@ -266,10 +279,11 @@ router.get('/dashboard', auth, isAdmin, async (req, res) => {
         volunteers: processedVolunteers
       },
       urgentVisits: urgentVisits.map(visit => ({
-        ...visit.toObject(),
+        ...visit,
         elder: {
-          ...visit.elder.toObject(),
-          id: visit.elder._id.toString()
+          ...visit.elder,
+          id: visit.elder._id.toString(),
+          address: formatAddress(visit.elder.address)
         }
       }))
     });

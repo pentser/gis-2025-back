@@ -25,15 +25,15 @@ const elderlyIcon = new L.DivIcon({
     justify-content: center;
     background-color: #e74c3c; 
     color: white;
-    width: 16px; 
-    height: 16px; 
+    width: 45px; 
+    height: 45px; 
     border-radius: 50%; 
-    border: 2px solid white;
-    box-shadow: 0 0 4px rgba(0,0,0,0.4);
+    border: 5px solid white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
   "></div>`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-  popupAnchor: [0, -10]
+  iconSize: [55, 55],
+  iconAnchor: [27, 27],
+  popupAnchor: [0, -27]
 });
 
 const volunteerIcon = new L.DivIcon({
@@ -44,15 +44,15 @@ const volunteerIcon = new L.DivIcon({
     justify-content: center;
     background-color: #000000; 
     color: white;
-    width: 14px; 
-    height: 14px; 
+    width: 45px; 
+    height: 45px; 
     border-radius: 50%; 
-    border: 2px solid white;
-    box-shadow: 0 0 4px rgba(0,0,0,0.4);
+    border: 5px solid white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
   "></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-  popupAnchor: [0, -9]
+  iconSize: [55, 55],
+  iconAnchor: [27, 27],
+  popupAnchor: [0, -27]
 });
 
 // פונקציה לחישוב מרחק בין שתי נקודות בקילומטרים
@@ -150,29 +150,55 @@ const getUrgencyColor = (elder) => {
 
 // פונקציה ליצירת אייקון לפי דחיפות
 const createElderlyIcon = (urgency) => {
-  const colors = {
-    high: '#e74c3c',    // אדום
-    medium: '#f39c12',  // כתום
-    low: '#2ecc71'      // ירוק
-  };
-
-  return new L.DivIcon({
-    className: 'elderly-marker',
+  const color = urgency === 'high' ? '#ff4444' :
+                urgency === 'medium' ? '#ffbb33' : '#00C851';
+  
+  return L.divIcon({
+    className: 'custom-div-icon',
     html: `<div style="
+      background-color: ${color}; 
+      width: 45px; 
+      height: 45px; 
+      border-radius: 50%; 
+      border: 5px solid white; 
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: ${colors[urgency]}; 
+      font-size: 24px;
       color: white;
-      width: 16px; 
-      height: 16px; 
+      font-weight: bold;
+    ">
+      ${urgency === 'high' ? '!' : ''}
+    </div>`,
+    iconSize: [55, 55],
+    iconAnchor: [27, 27],
+    popupAnchor: [0, -27]
+  });
+};
+
+const createVolunteerIcon = () => {
+  return L.divIcon({
+    className: 'custom-div-icon',
+    html: `<div style="
+      background-color: #4285F4; 
+      width: 45px; 
+      height: 45px; 
       border-radius: 50%; 
-      border: 2px solid white;
-      box-shadow: 0 0 4px rgba(0,0,0,0.4);
-    "></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    popupAnchor: [0, -10]
+      border: 5px solid white; 
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      font-weight: bold;
+    ">
+      V
+    </div>`,
+    iconSize: [55, 55],
+    iconAnchor: [27, 27],
+    popupAnchor: [0, -27]
   });
 };
 
@@ -718,7 +744,7 @@ const MapView = () => {
             <>
               <Marker
                 position={userLocation}
-                icon={volunteerIcon}
+                icon={createVolunteerIcon()}
               >
                 <Popup>
                   <div>
