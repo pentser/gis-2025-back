@@ -8,7 +8,7 @@ import styles from './About.module.css';
 const About = () => {
   const teamMembers = [
     {
-      role: 'יובל הוכימן Front-End',
+      role: 'יובל הוכברג Front-End',
       specialties: ['React', 'JavaScript', 'HTML/CSS', 'Leaflet/OpenLayers'],
       responsibilities: 'פיתוח ממשק המשתמש, אינטגרציה של מפות, UX/UI',
       icon: <CodeIcon sx={{ fontSize: 40 }} />
