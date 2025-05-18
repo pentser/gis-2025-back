@@ -11,7 +11,11 @@ COPY . .
 ENV NODE_ENV=production
 ENV VITE_API_URL=http://localhost:3000
 
+RUN ls -la src/components/
+
 RUN npm run build
+
+RUN ls -la dist/
 
 FROM nginx:alpine
 
