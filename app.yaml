@@ -2,7 +2,7 @@ name: gis-2025
 services:
 - name: server
   github:
-    branch: main
+    branch: eli_pentser_final
     deploy_on_push: true
     repo: pentser/gis-2025-back
   dockerfile_path: server/Dockerfile
@@ -25,7 +25,7 @@ services:
 
 - name: client
   github:
-    branch: main
+    branch: eli_pentser_final
     deploy_on_push: true
     repo: pentser/gis-2025-back
   dockerfile_path: client/Dockerfile
