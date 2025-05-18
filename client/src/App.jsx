@@ -27,7 +27,7 @@ import { useAuth } from './context/AuthContext';
 import VolunteerVisits from './components/volunteer/VolunteerVisits';
 import PrivateRoute from './components/Auth/PrivateRoute';
 import ElderlyPage from './pages/ElderlyPage';
-import AdminVolunteers from './components/Admin/AdminVolunteers';
+import AdminVolunteers from './components/admin/AdminVolunteers';
 import About from './components/About/About';
 
 // יצירת ערכת נושא מותאמת
