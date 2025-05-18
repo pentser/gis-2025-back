@@ -11,6 +11,13 @@ import adminRoutes from './routes/admin.routes.js';
 
 dotenv.config();
 
+// בדיקת משתני סביבה
+console.log('Environment variables check:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- PORT:', process.env.PORT);
+console.log('- MongoDB URI exists:', !!process.env.MONGODB_URI);
+console.log('- MongoDB URI starts with:', process.env.MONGODB_URI?.substring(0, 20));
+
 const app = express();
 
 // Middleware
@@ -57,16 +64,22 @@ app.get('/api/health', (req, res) => {
 });
 
 // חיבור למסד הנתונים
+console.log('מנסה להתחבר למסד הנתונים...');
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
-    console.log('Connected to MongoDB database');
+    console.log('Connected to MongoDB database successfully!');
     const port = process.env.PORT || 5000;
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
     });
   })
   .catch((error) => {
-    console.error('שגיאה בהתחברות למסד הנתונים:', error);
+    console.error('שגיאה מפורטת בהתחברות למסד הנתונים:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
   });
 
 // טיפול בשגיאות כדי למנוע החזרת HTML
