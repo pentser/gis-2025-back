@@ -4,7 +4,7 @@ services:
   github:
     branch: main
     deploy_on_push: true
-    repo: elipe/gis-2025-back
+    repo: pentser/gis-2025-back
   dockerfile_path: server/Dockerfile
   source_dir: server
   http_port: 3000
@@ -27,7 +27,7 @@ services:
   github:
     branch: main
     deploy_on_push: true
-    repo: elipe/gis-2025-back
+    repo: pentser/gis-2025-back
   dockerfile_path: client/Dockerfile
   source_dir: client
   http_port: 80
