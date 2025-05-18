@@ -51,6 +51,11 @@ app.use('/api/elderly', elderlyRoutes);
 app.use('/api/volunteers', volunteerRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // חיבור למסד הנתונים
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
