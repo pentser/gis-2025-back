@@ -117,27 +117,71 @@ const RadiusCircleUpdater = ({ center, radius }) => {
 
 // קומפוננטת LocationSelector
 const LocationSelector = ({ onLocationSelect }) => {
-  const handleGPSClick = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onLocationSelect([latitude, longitude]);
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          alert('לא הצלחנו לקבל את המיקום שלך. אנא נסה שוב.');
-        }
-      );
-    } else {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGPSClick = async () => {
+    if (!navigator.geolocation) {
       alert('הדפדפן שלך לא תומך באיתור מיקום.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // הגדרת timeout של 10 שניות
+      const position = await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('פג הזמן לקבלת המיקום'));
+        }, 10000);
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            clearTimeout(timeoutId);
+            resolve(pos);
+          },
+          (error) => {
+            clearTimeout(timeoutId);
+            let errorMessage = 'שגיאה בקבלת המיקום: ';
+            switch (error.code) {
+              case error.PERMISSION_DENIED:
+                errorMessage += 'נדרש אישור גישה למיקום';
+                break;
+              case error.POSITION_UNAVAILABLE:
+                errorMessage += 'מידע המיקום אינו זמין';
+                break;
+              case error.TIMEOUT:
+                errorMessage += 'פג הזמן לקבלת המיקום';
+                break;
+              default:
+                errorMessage += 'שגיאה לא ידועה';
+            }
+            reject(new Error(errorMessage));
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      });
+
+      const { latitude, longitude } = position.coords;
+      onLocationSelect([latitude, longitude]);
+    } catch (error) {
+      console.error('שגיאה בקבלת מיקום:', error);
+      alert(error.message || 'לא הצלחנו לקבל את המיקום שלך. אנא נסה שוב.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="location-selector">
-      <button className="gps-button" onClick={handleGPSClick}>
-        מצא את המיקום שלי
+      <button 
+        className="gps-button" 
+        onClick={handleGPSClick}
+        disabled={isLoading}
+      >
+        {isLoading ? 'מקבל מיקום...' : 'מצא את המיקום שלי'}
       </button>
     </div>
   );
