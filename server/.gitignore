@@ -1,3 +1,8 @@
 node_modules/
 .env
+Dockerfile
+.dockerignore
+npm-debug.log
+dist/
+build/
 
