@@ -154,7 +154,7 @@ const seedData = async () => {
         type: 'Point',
         coordinates: [34.7818, 32.0853]  // תל אביב
       },
-      role: 'מנהל',
+      role: 'admin',
       isActive: true,
       lastActive: new Date()
     });
@@ -174,7 +174,7 @@ const seedData = async () => {
         type: 'Point',
         coordinates: [34.8114, 31.8928]  // רחובות
       },
-      role: 'מנהל',
+      role: 'admin',
       isActive: true,
       lastActive: new Date()
     });
@@ -195,7 +195,7 @@ const seedData = async () => {
         type: 'Point',
         coordinates: [34.9896, 32.7940]  // חיפה
       },
-      role: 'מנהל',
+      role: 'admin',
       isActive: true,
       lastActive: new Date()
     });
@@ -216,7 +216,7 @@ const seedData = async () => {
             type: 'Point',
         coordinates: [34.7913, 31.2529]  // באר שבע
       },
-      role: 'מנהל',
+      role: 'admin',
       isActive: true,
       lastActive: new Date()
     });
@@ -237,7 +237,7 @@ const seedData = async () => {
             type: 'Point',
             coordinates: [35.2137, 31.7683]  // ירושלים
       },
-      role: 'מנהל',
+      role: 'admin',
       isActive: true,
       lastActive: new Date()
     });
@@ -293,7 +293,7 @@ const seedData = async () => {
           type: 'Point',
           coordinates
         },
-        role: 'מתנדב',
+        role: 'volunteer',
         isActive,
         status,
         lastActive: getRandomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date())

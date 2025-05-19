@@ -2,20 +2,32 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# התקנת wget עבור healthcheck
+RUN apk add --no-cache wget
+
+# העתקת קבצי package.json ו-package-lock.json
 COPY package*.json ./
 
-RUN npm install
+# התקנת תלויות
+RUN npm ci --only=production
 
+# העתקת שאר הקבצים
 COPY . .
 
-ARG MONGODB_URI
-ENV MONGODB_URI=${MONGODB_URI:-mongodb://localhost:27017/gis2025}
-ENV PORT=3000
+# הגדרת משתני סביבה
+ENV NODE_ENV=production
+ENV PORT=5000
+ENV MONGODB_URI=mongodb+srv://elipentser:ckrbmjTf0DhUt2kZ@cluster0.d76yhl7.mongodb.net/gis-2025-back
+ENV JWT_SECRET=your_jwt_secret_key_here
+ENV JWT_EXPIRES_IN=7d
+ENV CORS_ORIGIN=https://your-frontend-domain.com
 
-EXPOSE 3000
+# חשיפת פורט
+EXPOSE 5000
 
-# Add healthcheck
+# הוספת healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:5000/api/health || exit 1
 
-CMD ["npm", "start"] 
+# הרצת השרת
+CMD ["node", "server.js"] 
