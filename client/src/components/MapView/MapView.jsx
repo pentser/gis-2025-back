@@ -382,13 +382,37 @@ const MapView = () => {
       volunteers: []
     };
 
-    if (filters.showElderly && Array.isArray(mapData.elderly)) {
+    // בדיקת תקינות הנתונים
+    if (!mapData) {
+      console.error('mapData is undefined');
+      return result;
+    }
+
+    if (!Array.isArray(mapData.elderly)) {
+      console.error('mapData.elderly is not an array:', mapData.elderly);
+      return result;
+    }
+
+    if (!Array.isArray(mapData.volunteers)) {
+      console.error('mapData.volunteers is not an array:', mapData.volunteers);
+      return result;
+    }
+
+    if (filters.showElderly) {
       result.elderly = mapData.elderly
-        .filter(filterBySearch)
+        .filter(elder => {
+          if (!elder) {
+            console.warn('Found null/undefined elder in mapData.elderly');
+            return false;
+          }
+          return filterBySearch(elder);
+        })
         .map(elder => {
-          if (!elder) return null;
           const coords = normalizeCoordinates(elder.location);
-          if (!coords) return null;
+          if (!coords) {
+            console.warn(`Invalid coordinates for elder ${elder._id}:`, elder.location);
+            return null;
+          }
           return { ...elder, coordinates: coords };
         })
         .filter(elder => {
@@ -398,13 +422,21 @@ const MapView = () => {
         });
     }
 
-    if (filters.showVolunteers && Array.isArray(mapData.volunteers)) {
+    if (filters.showVolunteers) {
       result.volunteers = mapData.volunteers
-        .filter(filterBySearch)
+        .filter(volunteer => {
+          if (!volunteer) {
+            console.warn('Found null/undefined volunteer in mapData.volunteers');
+            return false;
+          }
+          return filterBySearch(volunteer);
+        })
         .map(volunteer => {
-          if (!volunteer) return null;
           const coords = normalizeCoordinates(volunteer.location);
-          if (!coords) return null;
+          if (!coords) {
+            console.warn(`Invalid coordinates for volunteer ${volunteer._id}:`, volunteer.location);
+            return null;
+          }
           return { ...volunteer, coordinates: coords };
         })
         .filter(Boolean);
