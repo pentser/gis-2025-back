@@ -3,6 +3,7 @@ import { auth } from '../middleware/auth.middleware.js';
 import Visit from '../models/visit.model.js';
 import Elder from '../models/elderly.model.js';
 import Volunteer from '../models/volunteer.model.js';
+import User from '../models/user.model.js';
 
 const router = express.Router();
 
@@ -49,13 +50,14 @@ router.get('/', auth, async (req, res) => {
 });
 
 // נתיב לקבלת נתוני המפה
-router.get('/map', async (req, res) => {
+router.get('/map', auth, async (req, res) => {
   try {
     const { lat, lng, radius = 10 } = req.query;
     
     // המרת הרדיוס למעלות (1 ק"מ = ~0.0089 מעלות)
     const radiusInDegrees = radius * 0.0089;
     
+    // שליפת קשישים באזור
     const elderly = await Elder.find({
       'location.coordinates': {
         $geoWithin: {
@@ -64,10 +66,45 @@ router.get('/map', async (req, res) => {
       }
     }).populate('lastVisit');
 
-    res.json({ elderly });
+    // שליפת מתנדבים באזור
+    const volunteers = await User.find({
+      role: 'volunteer',
+      'location.coordinates': {
+        $geoWithin: {
+          $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInDegrees]
+        }
+      }
+    }).select('firstName lastName location status');
+
+    // עיבוד הנתונים
+    const processedElderly = elderly.map(elder => ({
+      _id: elder._id,
+      firstName: elder.firstName,
+      lastName: elder.lastName,
+      address: elder.address,
+      location: elder.location,
+      urgency: elder.urgency || 'medium',
+      lastVisit: elder.lastVisit
+    }));
+
+    const processedVolunteers = volunteers.map(volunteer => ({
+      _id: volunteer._id,
+      firstName: volunteer.firstName,
+      lastName: volunteer.lastName,
+      location: volunteer.location,
+      status: volunteer.status || 'available'
+    }));
+
+    res.json({
+      elderly: processedElderly,
+      volunteers: processedVolunteers
+    });
   } catch (error) {
     console.error('שגיאה בקבלת נתוני מפה:', error);
-    res.status(500).json({ message: 'שגיאה בקבלת נתוני מפה' });
+    res.status(500).json({ 
+      message: 'שגיאה בקבלת נתוני מפה',
+      error: error.message 
+    });
   }
 });
 

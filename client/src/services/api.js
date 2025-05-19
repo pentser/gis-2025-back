@@ -148,13 +148,30 @@ export const deleteElderly = (id) =>
 
 export const fetchDashboardData = () => fetchWithAuth('/api/dashboard');
 
-export const fetchMapData = (lat, lng) => {
-  const params = new URLSearchParams();
-  if (lat && lng) {
-    params.append('lat', lat);
-    params.append('lng', lng);
+export const fetchMapData = async (lat, lng) => {
+  try {
+    const params = new URLSearchParams();
+    if (lat && lng) {
+      params.append('lat', lat);
+      params.append('lng', lng);
+    }
+    
+    // בדיקה אם המשתמש הוא אדמין
+    const { user } = JSON.parse(localStorage.getItem('user') || '{}');
+    const endpoint = user?.role === 'admin' ? '/api/admin/map' : '/api/dashboard/map';
+    
+    const response = await fetchWithAuth(`${endpoint}?${params.toString()}`);
+    const data = await response.json();
+    
+    // וידוא שהנתונים בפורמט הנכון
+    return {
+      elderly: Array.isArray(data.elderly) ? data.elderly : [],
+      volunteers: Array.isArray(data.volunteers) ? data.volunteers : []
+    };
+  } catch (error) {
+    console.error('שגיאה בטעינת נתוני מפה:', error);
+    return { elderly: [], volunteers: [] };
   }
-  return fetchWithAuth(`/api/dashboard/map?${params.toString()}`);
 };
 
 export const fetchVisitStats = () => fetchWithAuth('/api/visits/stats');
