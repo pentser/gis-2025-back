@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import styles from './VisitList.module.css';
+import api from '../../api/api';
 
 const statusTranslations = {
   scheduled: 'מתוכנן',
@@ -47,19 +48,13 @@ const VisitList = () => {
   const fetchVisits = async () => {
     try {
       setLoading(true);
-      // קבלת הטוקן מהלוקל סטורג'
       const token = localStorage.getItem('token');
       
       if (!token) {
         throw new Error('אין הרשאה');
       }
 
-      const response = await fetch('http://localhost:5000/api/visits', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/visits');
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -68,13 +63,11 @@ const VisitList = () => {
         throw new Error('שגיאה בטעינת הביקורים');
       }
 
-      const data = await response.json();
-      setVisits(data);
+      setVisits(response.data);
     } catch (err) {
       console.error('Error:', err);
       setError(err.message);
       if (err.message === 'אין הרשאה') {
-        // אפשר להוסיף ניווט לדף ההתחברות
         navigate('/login');
       }
     } finally {

@@ -9,11 +9,10 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: process.env.NODE_ENV === 'production' 
-          ? 'https://gis-2025-fl8jx.ondigitalocean.app'
-          : 'http://localhost:5000',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        secure: true
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
   },

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'https://gis-2025-fl8jx.ondigitalocean.app';
 
 const AuthContext = createContext(null);
 
