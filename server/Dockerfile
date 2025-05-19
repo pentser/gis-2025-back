@@ -20,7 +20,7 @@ ENV PORT=5000
 ENV MONGODB_URI=mongodb+srv://elipentser:ckrbmjTf0DhUt2kZ@cluster0.d76yhl7.mongodb.net/gis-2025-back
 ENV JWT_SECRET=your_jwt_secret_key_here
 ENV JWT_EXPIRES_IN=7d
-ENV CORS_ORIGIN=https://your-frontend-domain.com
+ENV CORS_ORIGIN=https://gis-2025-fl8jx.ondigitalocean.app
 
 # חשיפת פורט
 EXPOSE 5000

@@ -9,9 +9,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:5000',
+        target: process.env.NODE_ENV === 'production' 
+          ? 'https://gis-2025-fl8jx.ondigitalocean.app'
+          : 'http://localhost:5000',
         changeOrigin: true,
-        secure: false
+        secure: true
       }
     }
   },
