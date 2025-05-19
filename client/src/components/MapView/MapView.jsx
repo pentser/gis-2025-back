@@ -360,25 +360,38 @@ const MapView = () => {
     urgencyLevel: 'all',
     searchQuery: ''
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // פונקציה לטעינת נתוני המפה
-  const loadMapData = async (userLocation) => {
+  const loadMapData = useCallback(async (userLocation) => {
     try {
+      setIsLoading(true);
+      setError(null);
       console.log('Loading map data...');
-      const data = user?.role === 'admin' ?
-        await fetchAdminMap() :
-        await fetchMapData(userLocation?.[0], userLocation?.[1]);
+
+      let data;
+      if (user?.role === 'admin') {
+        data = await fetchAdminMap();
+      } else {
+        const params = new URLSearchParams();
+        if (userLocation?.[0] && userLocation?.[1]) {
+          params.append('lat', userLocation[0]);
+          params.append('lng', userLocation[1]);
+        }
+        params.append('radius', radius);
+        data = await fetchMapData(userLocation?.[0], userLocation?.[1]);
+      }
       
       console.log('Received map data:', data);
       
       if (!data) {
-        console.error('No data received from server');
-        return;
+        throw new Error('לא התקבלו נתונים מהשרת');
       }
 
       // וידוא ונירמול הנתונים
       const normalizedData = {
-        elderly: (data.elderly || []).map(elder => ({
+        elderly: Array.isArray(data.elderly) ? data.elderly.map(elder => ({
           _id: elder._id || String(Math.random()),
           firstName: elder.firstName || '',
           lastName: elder.lastName || '',
@@ -387,8 +400,8 @@ const MapView = () => {
           urgency: elder.urgency || 'medium',
           lastVisit: elder.lastVisit || null,
           location: elder.location || null
-        })),
-        volunteers: (data.volunteers || []).map(volunteer => ({
+        })) : [],
+        volunteers: Array.isArray(data.volunteers) ? data.volunteers.map(volunteer => ({
           _id: volunteer._id || String(Math.random()),
           firstName: volunteer.firstName || '',
           lastName: volunteer.lastName || '',
@@ -396,51 +409,43 @@ const MapView = () => {
           phone: volunteer.phone || '',
           availability: volunteer.availability || '',
           location: volunteer.location || null
-        }))
+        })) : []
       };
 
       setMapData(normalizedData);
     } catch (error) {
       console.error('Error loading map data:', error);
-      alert('שגיאה בטעינת נתוני המפה');
+      setError(error.message || 'שגיאה בטעינת נתוני המפה');
+      setMapData({ elderly: [], volunteers: [] });
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [user?.role, radius]);
 
   // טעינת נתונים ראשונית
   useEffect(() => {
     loadMapData();
-  }, []);
+  }, [loadMapData]);
 
   // פונקציה לסינון לפי טקסט חיפוש
-  const filterBySearch = (item) => {
+  const filterBySearch = useCallback((item) => {
     if (!filters.searchQuery) return true;
     const searchLower = filters.searchQuery.toLowerCase();
     const fullName = `${item.firstName || ''} ${item.lastName || ''}`.toLowerCase();
     return fullName.includes(searchLower);
-  };
+  }, [filters.searchQuery]);
 
   // סינון וחישוב הנקודות למפה
   const points = useMemo(() => {
+    if (!mapData || !Array.isArray(mapData.elderly) || !Array.isArray(mapData.volunteers)) {
+      console.warn('Invalid map data:', mapData);
+      return { elderly: [], volunteers: [] };
+    }
+
     const result = {
       elderly: [],
       volunteers: []
     };
-
-    // בדיקת תקינות הנתונים
-    if (!mapData) {
-      console.error('mapData is undefined');
-      return result;
-    }
-
-    if (!Array.isArray(mapData.elderly)) {
-      console.error('mapData.elderly is not an array:', mapData.elderly);
-      return result;
-    }
-
-    if (!Array.isArray(mapData.volunteers)) {
-      console.error('mapData.volunteers is not an array:', mapData.volunteers);
-      return result;
-    }
 
     if (filters.showElderly) {
       result.elderly = mapData.elderly
@@ -513,7 +518,7 @@ const MapView = () => {
     }
   };
 
-  if (!mapData) {
+  if (isLoading) {
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -522,6 +527,20 @@ const MapView = () => {
         height: '400px' 
       }}>
         <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px',
+        color: 'error.main'
+      }}>
+        <Typography>{error}</Typography>
       </Box>
     );
   }
@@ -557,11 +576,7 @@ const MapView = () => {
               <Popup>
                 <div className="popup-content">
                   <h3>{elder.firstName} {elder.lastName}</h3>
-                  {elder.address && typeof elder.address === 'object' ? (
-                    <p><strong>כתובת:</strong> {`${elder.address.street || ''}, ${elder.address.city || ''} ${elder.address.zipCode || ''}`}</p>
-                  ) : elder.address && (
-                    <p><strong>כתובת:</strong> {elder.address}</p>
-                  )}
+                  {elder.address && <p><strong>כתובת:</strong> {elder.address}</p>}
                   {elder.phone && <p><strong>טלפון:</strong> {elder.phone}</p>}
                   <p><strong>דחיפות:</strong> {getUrgencyText(elder.urgency)}</p>
                   {elder.lastVisit && (
@@ -612,9 +627,11 @@ const MapView = () => {
         </div>
         <div className="stat-item">
           <span className="stat-value">
-            {points.elderly.reduce((sum, elder) => 
-              elder.distanceFromCurrentLocation ? sum + elder.distanceFromCurrentLocation : sum, 0
-            ).toFixed(1)}
+            {points.elderly.length > 0 
+              ? (points.elderly.reduce((sum, elder) => 
+                  elder.distanceFromCurrentLocation ? sum + elder.distanceFromCurrentLocation : sum, 0
+                ) / points.elderly.length).toFixed(1)
+              : '0.0'}
           </span>
           <span className="stat-label">מרחק ממוצע (ק"מ)</span>
         </div>
